@@ -33,6 +33,7 @@ export const uiLabels: TranslationMap = {
   useBuyOrders: { en: "Use Buy Orders (Materials)", es: "Órdenes de Compra (Materiales)" },
   tipUpdated: { en: "Time since last market price update", es: "Tiempo desde la última actualización del precio en el mercado" },
   updated: { en: "Updated", es: "Actualizado" },
+  
 
   // Landing
   heroTitle: { en: "Maximize Your Silver", es: "Maximiza Tu Plata" },
@@ -95,6 +96,15 @@ export const uiLabels: TranslationMap = {
   tipVolume: { en: "Average daily market volume (units sold per day)", es: "Volumen diario promedio del mercado (unidades vendidas por día)" },
   tipTotalProfit: { en: "Total profit = Unit Profit × Quantity", es: "Ganancia total = Ganancia por unidad × Cantidad" },
   tipRoi: { en: "Return on Investment as a percentage", es: "Retorno de inversión como porcentaje" },
+
+  "Warrior's Journal": { en: "Warrior's Journal", es: "Diario de Guerrero" },
+  "Hunter's Journal": { en: "Hunter's Journal", es: "Diario de Cazador" },
+  "Mage's Journal": { en: "Mage's Journal", es: "Diario de Mago" },
+  "Toolmaker's Journal": { en: "Toolmaker's Journal", es: "Diario de Hojalatero" },
+  "Tinker's Journal": { en: "Tinker's Journal", es: "Diario de Hojalatero" },
+  "Blacksmith's Journal": { en: "Blacksmith's Journal", es: "Diario de Herrero" },
+  "Fletcher's Journal": { en: "Fletcher's Journal", es: "Diario de Flechero" },
+  "Imbuer's Journal": { en: "Imbuer's Journal", es: "Diario de Imbuidor" },
 };
 
 export function t(key: string, locale: Locale): string {
