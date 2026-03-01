@@ -20,7 +20,7 @@ export function SideMenu({ open, onClose }: SideMenuProps) {
     <>
       {/* Overlay */}
       {open && (
-        <div className="fixed inset-0 z-40 bg-background/60 backdrop-blur-sm" onClick={onClose} />
+        <div className="fixed inset-0 z-50 bg-background/60 backdrop-blur-sm" onClick={onClose} />
       )}
       {/* Drawer */}
       <div

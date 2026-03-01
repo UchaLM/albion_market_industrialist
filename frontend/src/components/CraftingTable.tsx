@@ -122,7 +122,7 @@ export function CraftingTable({ filters }: any) {
   return (
     <div className="max-h-[700px] overflow-y-auto rounded-lg border border-border bg-card relative">
       <table className="w-full text-sm">
-        <thead className="sticky top-0 z-50 bg-muted/95 backdrop-blur border-b border-border shadow-sm">
+        <thead className="sticky top-0 z-20 bg-muted/95 backdrop-blur border-b border-border shadow-sm">
           <tr>
             {baseColumns.map((col) => (
               <th
