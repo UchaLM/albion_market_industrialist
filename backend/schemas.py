@@ -20,6 +20,7 @@ class CraftingResponse(BaseModel):
     total_profit: int
     roi: float
     volume: int
+    updated_at: Optional[str] = None
 
     class Config:
         from_attributes = True

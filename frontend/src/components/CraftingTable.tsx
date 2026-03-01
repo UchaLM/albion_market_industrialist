@@ -20,12 +20,12 @@ type CraftingEntry = {
   volume: number;
   total_profit: number; 
   roi: number;
+  updated_at?: string;
 };
 
 type SortKey = keyof CraftingEntry;
 type SortDir = "asc" | "desc";
 
-// ELIMINADA LA COLUMNA DE JPROFIT
 const baseColumns: { key: SortKey; label: string; tip: string; align?: string }[] = [
   { key: "item_name_en", label: "item", tip: "tipItem" },
   { key: "craft_city", label: "cCity", tip: "tipCCity" },
@@ -39,11 +39,21 @@ const baseColumns: { key: SortKey; label: string; tip: string; align?: string }[
   { key: "volume", label: "volume", tip: "tipVolume", align: "right" },
   { key: "total_profit", label: "totalProfit", tip: "tipTotalProfit", align: "right" },
   { key: "roi", label: "roi", tip: "tipRoi", align: "right" },
+  { key: "updated_at", label: "updated", tip: "tipUpdated", align: "right" }, // NUEVO
 ];
 
 function formatSilver(n: number) {
   return n >= 1000 ? `${(n / 1000).toFixed(1)}k` : n.toLocaleString();
 }
+
+const getTimeAgo = (dateString?: string) => {
+  if (!dateString || dateString.startsWith("0001") || dateString === "Old") return "Old";
+  const diff = Date.now() - new Date(dateString).getTime();
+  const hours = Math.floor(diff / (1000 * 60 * 60));
+  if (hours < 1) return "Just now";
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
+};
 
 export function CraftingTable({ filters }: any) {
   const { locale } = useLocale();
@@ -57,6 +67,7 @@ export function CraftingTable({ filters }: any) {
         use_premium: (filters?.premium ?? true).toString(),
         use_focus: (filters?.useFocus ?? false).toString(),
         use_journals: "true",
+        use_buy_orders: (filters?.useBuyOrders ?? false).toString(),
         tier: (filters?.tier ?? 0).toString(),
         limit: "500" 
       });
@@ -107,6 +118,12 @@ export function CraftingTable({ filters }: any) {
     
     if (col.key === "roi") return <span className={(val as number) >= 40 ? "text-profit" : "text-foreground"}>{val}%</span>;
     if (col.key === "material_cost" || col.key === "sell_price") return formatSilver(val as number);
+
+    if (col.key === "updated_at") {
+      const timeStr = getTimeAgo(val as string);
+      const isOld = timeStr.includes("d") || timeStr === "Old";
+      return <span className={`font-medium ${isOld ? "text-red-400" : "text-green-400"}`}>{timeStr}</span>;
+    }
     
     return String(val);
   };
@@ -146,7 +163,6 @@ export function CraftingTable({ filters }: any) {
                         sideOffset={6}
                         className="max-w-[260px] whitespace-normal break-words p-3 text-sm z-[9999] bg-popover text-popover-foreground shadow-lg leading-relaxed border-border"
                       >
-                        {/* AQUI ESTA EL MENSAJE DINAMICO Y MOTIVACIONAL PARA LOS DIARIOS */}
                         {col.key === "journal" 
                           ? (locale === 'es' 
                               ? 'Diario que puedes llenar al craftear. ¡Lleva siempre diarios vacíos para obtener ganancias extra!' 

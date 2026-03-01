@@ -42,7 +42,7 @@ def process_and_store_items():
 
     extras = []
     journals = ["WARRIOR", "HUNTER", "MAGE", "TOOLMAKER"]
-    for tier in range(4, 9):
+    for tier in range(2, 9):
         extras.extend([f"T{tier}_RUNE", f"T{tier}_SOUL", f"T{tier}_RELIC"])
         for j in journals:
             extras.extend([f"T{tier}_JOURNAL_{j}_EMPTY", f"T{tier}_JOURNAL_{j}_FULL"])
@@ -210,6 +210,7 @@ def process_and_store_items():
             for sell_city in SELL_CITIES:
                 sell_price = prices.get(target_id, {}).get("sell_offers", {}).get(sell_city, 0)
                 mkt_vol = volumes.get(target_id, {}).get(sell_city, 0)
+                updated_date = prices.get(target_id, {}).get("sell_price_min_date", {}).get(sell_city, "Old")
                 if sell_price <= 0 or mkt_vol < 0.1: continue
 
                 opportunities_to_upsert.append({
@@ -228,7 +229,8 @@ def process_and_store_items():
                     "non_returnable_cost_buy": best_non_buy if best_non_buy != float('inf') else 0,
                     "journal_profit": raw_j_profit,
                     "item_value": item_val,
-                    "volume": mkt_vol
+                    "volume": mkt_vol,
+                    "updated_at": updated_date
                 })
 
     if opportunities_to_upsert:

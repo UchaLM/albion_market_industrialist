@@ -5,7 +5,7 @@ export function FiltersPanel({ filters, setFilters }: any) {
   const { locale } = useLocale();
 
   const allCities = ["Black Market", "Caerleon", "Lymhurst", "Bridgewatch", "Martlock", "Thetford", "Fort Sterling", "Brecilien"];
-  const allTiers = [0, 4, 5, 6, 7, 8];
+  const allTiers = [0, 2, 3, 4, 5, 6, 7, 8];
 
   return (
     <div className="flex flex-wrap items-center gap-6 rounded-lg border border-border bg-card p-4">

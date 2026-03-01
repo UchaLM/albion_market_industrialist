@@ -25,7 +25,7 @@ class CraftingOpportunity(Base):
     item_value = Column(Float, nullable=False)
     volume = Column(Integer, default=0)
     
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    updated_at = Column(String, nullable=True)
 
     __table_args__ = (
         UniqueConstraint('item_id', 'craft_city', 'sell_city', name='uix_item_route'),

@@ -118,7 +118,7 @@ def get_crafting_profits(
             craft_city=opp.craft_city, sell_city=opp.sell_city, method=opp.method, journal=opp.journal if use_journals else "---",
             sell_price=int(opp.item_sell_price), material_cost=int(actual_material_cost), journal_profit=int(active_journal_profit), 
             station_fee=int(station_fee), unit_profit=int(unit_profit), qty=int(qty), total_profit=int(total_profit),
-            roi=round(roi, 2), volume=int(opp.volume)
+            roi=round(roi, 2), volume=int(opp.volume), updated_at=opp.updated_at
         )
 
         key = (opp.item_id, opp.sell_city)
