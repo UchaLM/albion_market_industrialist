@@ -60,7 +60,7 @@ export function CraftingTable({ filters }: any) {
         tier: (filters?.tier ?? 0).toString(),
         limit: "500" 
       });
-      const response = await fetch(`http://127.0.0.1:8000/api/crafting-profits?${params.toString()}`);
+      const response = await fetch(`https://albion-market-industrialist.onrender.com/api/crafting-profits?${params.toString()}`);
       if (!response.ok) throw new Error("Network response was not ok");
       let data = await response.json();
       
