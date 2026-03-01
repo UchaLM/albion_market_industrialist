@@ -1,0 +1,9 @@
+# Ignorar dependencias de Node (Frontend)
+**/node_modules/
+**/dist/
+**/.env
+
+# Ignorar base de datos y caché de Python (Backend)
+**/data/albion.db
+**/__pycache__/
+*.pyc
