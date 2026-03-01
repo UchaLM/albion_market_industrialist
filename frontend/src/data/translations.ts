@@ -30,6 +30,9 @@ export const uiLabels: TranslationMap = {
   marketFlipping: { en: "Market Flipping", es: "Reventa de Mercado" },
   tradeRoutes: { en: "Trade Routes", es: "Rutas Comerciales" },
   comingSoon: { en: "Coming Soon", es: "Próximamente" },
+  useBuyOrders: { en: "Use Buy Orders (Materials)", es: "Órdenes de Compra (Materiales)" },
+  tipUpdated: { en: "Time since last market price update", es: "Tiempo desde la última actualización del precio en el mercado" },
+  updated: { en: "Updated", es: "Actualizado" },
 
   // Landing
   heroTitle: { en: "Maximize Your Silver", es: "Maximiza Tu Plata" },

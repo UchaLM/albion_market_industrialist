@@ -19,7 +19,6 @@ def load_recipes():
     with open(DB_FILE, 'r', encoding='utf-8') as f: return json.load(f)
 
 def get_official_names():
-    # Now fetches both English and Spanish names
     try:
         r = requests.get(NAMES_URL).json()
         name_map = {}
@@ -41,7 +40,6 @@ def fetch_market_data(items, target_cities):
     for i in range(0, len(items), BATCH_SIZE):
         chunk_str = ','.join(items[i:i+BATCH_SIZE])
         
-        # 1. FETCH PRECIOS (Le sacamos el &qualities=1 para buscar todas las calidades)
         try:
             rp = requests.get(f"https://www.albion-online-data.com/api/v2/stats/prices/{chunk_str}?locations={cities_str}")
             if rp.status_code == 200:
@@ -55,13 +53,15 @@ def fetch_market_data(items, target_cities):
                     sell_price = d['sell_price_min']
                     buy_price = d['buy_price_max']
                     
-                    # Guardar la orden de VENTA más barata sin importar la calidad
                     if sell_price > 0:
                         current_sell = prices[iid]["sell_offers"].get(city, float('inf'))
                         if sell_price < current_sell:
                             prices[iid]["sell_offers"][city] = sell_price
+
+                            if "sell_price_min_date" not in prices[iid]:
+                                prices[iid]["sell_price_min_date"] = {}
+                            prices[iid]["sell_price_min_date"][city] = d.get('sell_price_min_date', "Old")
                             
-                    # Guardar la orden de COMPRA más cara sin importar la calidad
                     if buy_price > 0:
                         current_buy = prices[iid]["buy_offers"].get(city, 0)
                         if buy_price > current_buy:
@@ -69,7 +69,6 @@ def fetch_market_data(items, target_cities):
         except: 
             pass
             
-        # 2. FETCH VOLUMEN
         try:
             rh = requests.get(f"https://www.albion-online-data.com/api/v2/stats/history/{chunk_str}?locations={cities_str}&time-scale=24&qualities=1")
             if rh.status_code == 200:
@@ -129,7 +128,6 @@ def get_journal_info(item_id):
 
 def generate_target_items(recipes_db, max_tier=8):
     targets = []
-    # Massive blacklist to kill fish, trophies, raw materials, and junk
     EXCLUDE_KEYWORDS = [
         "_WOOD", "_ORE", "_FIBER", "_HIDE", "_ROCK", "_PLANKS", "_METALBAR", "_CLOTH", 
         "_LEATHER", "_STONEBLOCK", "_RUNE", "_SOUL", "_RELIC", "_JOURNAL_", "_EMPTY", "_FULL", 

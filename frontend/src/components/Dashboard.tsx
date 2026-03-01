@@ -7,8 +7,6 @@ import { AdPlaceholder } from "./AdPlaceholder";
 import { useLocale } from "@/contexts/LocaleContext";
 import { t } from "@/data/translations";
 import { AlertTriangle } from "lucide-react";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 
 export function Dashboard() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -40,15 +38,6 @@ export function Dashboard() {
                 ? 'Los precios del mercado son recopilados por la comunidad (Albion Data Project) y pueden tener un retraso de varias horas. ¡Verifica siempre los precios exactos en el juego antes de realizar grandes inversiones!' 
                 : 'Market prices are crowdsourced via the Albion Data Project and may be delayed by several hours. Always double-check exact prices in-game before making large investments!'}
             </p>
-          </div>
-          
-          <div className="flex items-center space-x-2 mb-4">
-            <Switch 
-              id="buy-orders" 
-              checked={filters.useBuyOrders} 
-              onCheckedChange={(checked) => setFilters(prev => ({ ...prev, useBuyOrders: checked }))} 
-            />
-            <Label htmlFor="buy-orders" className="text-sm font-medium">Use Buy Orders (Materials)</Label>
           </div>
           
           <FiltersPanel filters={filters} setFilters={setFilters} />

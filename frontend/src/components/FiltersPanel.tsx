@@ -1,5 +1,7 @@
 import { useLocale } from "@/contexts/LocaleContext";
 import { t } from "@/data/translations";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 export function FiltersPanel({ filters, setFilters }: any) {
   const { locale } = useLocale();
@@ -9,36 +11,59 @@ export function FiltersPanel({ filters, setFilters }: any) {
 
   return (
     <div className="flex flex-wrap items-center gap-6 rounded-lg border border-border bg-card p-4">
-      <label className="flex cursor-pointer items-center gap-2 text-sm">
-        <input
-          type="checkbox"
+      
+      {/* Switch: Premium */}
+      <div className="flex items-center space-x-2">
+        <Switch
+          id="premium"
           checked={filters.premium}
-          onChange={(e) => setFilters({ ...filters, premium: e.target.checked })}
-          className="h-4 w-4 rounded border-border bg-muted accent-gold"
+          onCheckedChange={(c) => setFilters({ ...filters, premium: c })}
         />
-        <span className={filters.premium ? "text-gold font-medium" : "text-muted-foreground"}>
+        <Label 
+          htmlFor="premium" 
+          className={`cursor-pointer ${filters.premium ? "text-gold font-medium" : "text-muted-foreground font-normal"}`}
+        >
           {t("premiumStatus", locale)}
-        </span>
-      </label>
+        </Label>
+      </div>
 
-      <label className="flex cursor-pointer items-center gap-2 text-sm">
-        <input
-          type="checkbox"
+      {/* Switch: Focus */}
+      <div className="flex items-center space-x-2">
+        <Switch
+          id="focus"
           checked={filters.useFocus}
-          onChange={(e) => setFilters({ ...filters, useFocus: e.target.checked })}
-          className="h-4 w-4 rounded border-border bg-muted accent-gold"
+          onCheckedChange={(c) => setFilters({ ...filters, useFocus: c })}
         />
-        <span className={filters.useFocus ? "text-gold font-medium" : "text-muted-foreground"}>
+        <Label 
+          htmlFor="focus" 
+          className={`cursor-pointer ${filters.useFocus ? "text-gold font-medium" : "text-muted-foreground font-normal"}`}
+        >
           {t("useFocus", locale)}
-        </span>
-      </label>
+        </Label>
+      </div>
 
-      <div className="flex items-center gap-2 text-sm">
+      {/* Switch: Buy Orders (¡Nuevo y alineado!) */}
+      <div className="flex items-center space-x-2">
+        <Switch
+          id="buy-orders"
+          checked={filters.useBuyOrders}
+          onCheckedChange={(c) => setFilters({ ...filters, useBuyOrders: c })}
+        />
+        <Label 
+          htmlFor="buy-orders" 
+          className={`cursor-pointer ${filters.useBuyOrders ? "text-gold font-medium" : "text-muted-foreground font-normal"}`}
+        >
+          {t("useBuyOrders", locale)}
+        </Label>
+      </div>
+
+      {/* Select: Tier */}
+      <div className="flex items-center gap-2 text-sm ml-auto">
         <span className="text-muted-foreground">Tier:</span>
         <select
           value={filters.tier}
           onChange={(e) => setFilters({ ...filters, tier: Number(e.target.value) })}
-          className="rounded-md border border-border bg-muted px-2.5 py-1.5 text-sm text-foreground outline-none focus:ring-1 focus:ring-gold"
+          className="rounded-md border border-border bg-muted px-2.5 py-1.5 text-sm text-foreground outline-none focus:ring-1 focus:ring-gold cursor-pointer"
         >
           {allTiers.map((t) => (
             <option key={t} value={t}>
@@ -48,18 +73,20 @@ export function FiltersPanel({ filters, setFilters }: any) {
         </select>
       </div>
 
+      {/* Select: City */}
       <div className="flex items-center gap-2 text-sm">
         <span className="text-muted-foreground">{t("targetCity", locale)}:</span>
         <select
           value={filters.city}
           onChange={(e) => setFilters({ ...filters, city: e.target.value })}
-          className="rounded-md border border-border bg-muted px-2.5 py-1.5 text-sm text-foreground outline-none focus:ring-1 focus:ring-gold"
+          className="rounded-md border border-border bg-muted px-2.5 py-1.5 text-sm text-foreground outline-none focus:ring-1 focus:ring-gold cursor-pointer"
         >
           {allCities.map((c) => (
             <option key={c} value={c}>{c}</option>
           ))}
         </select>
       </div>
+      
     </div>
   );
 }

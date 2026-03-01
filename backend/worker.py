@@ -221,7 +221,7 @@ def process_and_store_items():
                     "craft_city": craft_city,
                     "sell_city": sell_city,
                     "method": best_method,
-                    "journal": journal_short,
+                    "journal": f"{journal_full_name.capitalize()}'s Journal" if journal_full_name else "---",
                     "item_sell_price": sell_price,
                     "returnable_cost_sell": best_ret_sell if best_ret_sell != float('inf') else 0,
                     "non_returnable_cost_sell": best_non_sell if best_non_sell != float('inf') else 0,
@@ -236,7 +236,6 @@ def process_and_store_items():
     if opportunities_to_upsert:
         logging.info(f"Preparing to upsert {len(opportunities_to_upsert)} routes to the database...")
         
-        # SQLite variable limit protection: chunk the list into batches of 500
         CHUNK_SIZE = 500
         for i in range(0, len(opportunities_to_upsert), CHUNK_SIZE):
             chunk = opportunities_to_upsert[i : i + CHUNK_SIZE]
@@ -264,7 +263,6 @@ def process_and_store_items():
             
             db.execute(stmt)
             
-        # Commit all the chunks at the end
         db.commit()
     
     db.close()
