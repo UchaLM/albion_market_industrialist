@@ -46,13 +46,15 @@ function formatSilver(n: number) {
   return n >= 1000 ? `${(n / 1000).toFixed(1)}k` : n.toLocaleString();
 }
 
-const getTimeAgo = (dateString?: string) => {
-  if (!dateString || dateString.startsWith("0001") || dateString === "Old") return "Old";
+const getTimeAgo = (dateString: string | undefined, locale: string) => {
+  if (!dateString || dateString.startsWith("0001") || dateString === "Old") {
+    return locale === 'es' ? "Viejo" : "Old";
+  }
   const diff = Date.now() - new Date(dateString).getTime();
   const hours = Math.floor(diff / (1000 * 60 * 60));
-  if (hours < 1) return "Just now";
-  if (hours < 24) return `${hours}h ago`;
-  return `${Math.floor(hours / 24)}d ago`;
+  if (hours < 1) return locale === 'es' ? "Recién" : "Just now";
+  if (hours < 24) return locale === 'es' ? `hace ${hours}h` : `${hours}h ago`;
+  return locale === 'es' ? `hace ${Math.floor(hours / 24)}d` : `${Math.floor(hours / 24)}d ago`;
 };
 
 export function CraftingTable({ filters }: any) {
@@ -106,23 +108,17 @@ export function CraftingTable({ filters }: any) {
   const renderCell = (entry: CraftingEntry, col: (typeof baseColumns)[0]) => {
     const val = entry[col.key];
     
-    if (col.key === "item_name_en") {
-      const name = locale === 'es' ? entry.item_name_es : entry.item_name_en;
-      return <span className="font-medium text-gold">{name}</span>;
+    if (col.key === "journal") {
+      const jName = val as string;
+      if (!jName || jName === "---") return <span className="text-muted-foreground">---</span>;
+      return <span className="text-muted-foreground whitespace-nowrap">{t(jName, locale)}</span>;
     }
-    
-    if (col.key === "unit_profit" || col.key === "total_profit") {
-      const n = val as number;
-      return <span className={n >= 0 ? "text-profit font-semibold" : "text-loss font-semibold"}>{formatSilver(n)}</span>;
-    }
-    
-    if (col.key === "roi") return <span className={(val as number) >= 40 ? "text-profit" : "text-foreground"}>{val}%</span>;
-    if (col.key === "material_cost" || col.key === "sell_price") return formatSilver(val as number);
 
+    // ACTUALIZADO: Tiempo traducido y colores
     if (col.key === "updated_at") {
-      const timeStr = getTimeAgo(val as string);
-      const isOld = timeStr.includes("d") || timeStr === "Old";
-      return <span className={`font-medium ${isOld ? "text-red-400" : "text-green-400"}`}>{timeStr}</span>;
+      const timeStr = getTimeAgo(val as string, locale);
+      const isOld = timeStr.includes("d") || timeStr === "Old" || timeStr === "Viejo";
+      return <span className={`font-medium whitespace-nowrap ${isOld ? "text-red-400" : "text-green-400"}`}>{timeStr}</span>;
     }
     
     return String(val);
