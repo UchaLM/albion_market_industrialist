@@ -8,9 +8,36 @@ from models import CraftingOpportunity, Base
 import schemas
 from crafting_math import get_bonus_city
 
+import threading
+import time
+from worker import process_and_store_items
+
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Albion Industrialist API")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+def run_background_worker():
+    while True:
+        try:
+            print("Iniciando escaneo de mercado en segundo plano...")
+            process_and_store_items()
+            print("Escaneo terminado. Durmiendo por 1 hora.")
+        except Exception as e:
+            print(f"Error en el worker: {e}")
+        time.sleep(3600) 
+
+@app.on_event("startup")
+def startup_event():
+    thread = threading.Thread(target=run_background_worker, daemon=True)
+    thread.start()
 
 app.add_middleware(
     CORSMiddleware,
