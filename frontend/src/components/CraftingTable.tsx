@@ -20,7 +20,7 @@ type CraftingEntry = {
   volume: number;
   total_profit: number; 
   roi: number;
-  updated_at?: string;
+  updated_at?: string; // IMPORTANTE: Agregado para que no tire error
 };
 
 type SortKey = keyof CraftingEntry;
@@ -39,13 +39,14 @@ const baseColumns: { key: SortKey; label: string; tip: string; align?: string }[
   { key: "volume", label: "volume", tip: "tipVolume", align: "right" },
   { key: "total_profit", label: "totalProfit", tip: "tipTotalProfit", align: "right" },
   { key: "roi", label: "roi", tip: "tipRoi", align: "right" },
-  { key: "updated_at", label: "updated", tip: "tipUpdated", align: "right" }, // NUEVO
+  { key: "updated_at", label: "updated", tip: "tipUpdated", align: "right" },
 ];
 
 function formatSilver(n: number) {
   return n >= 1000 ? `${(n / 1000).toFixed(1)}k` : n.toLocaleString();
 }
 
+// FUNCION DEL RELOJ (Que seguramente se había borrado)
 const getTimeAgo = (dateString: string | undefined, locale: string) => {
   if (!dateString || dateString.startsWith("0001") || dateString === "Old") {
     return locale === 'es' ? "Viejo" : "Old";
@@ -108,16 +109,19 @@ export function CraftingTable({ filters }: any) {
   const renderCell = (entry: CraftingEntry, col: (typeof baseColumns)[0]) => {
     const val = entry[col.key];
     
+    // TRADUCCIÓN DE LOS OBJETOS PRINCIPALES
     if (col.key === "item_name_en") {
       const name = locale === 'es' ? entry.item_name_es : entry.item_name_en;
       return <span className="font-medium text-gold">{name}</span>;
     }
     
+    // TRADUCCIÓN DEL MÉTODO
     if (col.key === "method") {
       if (val === "Direct") return locale === 'es' ? "Directo" : "Direct";
       if (val === "Upgrade") return locale === 'es' ? "Mejora" : "Upgrade";
     }
 
+    // COLORES DE GANANCIAS
     if (col.key === "unit_profit" || col.key === "total_profit") {
       const n = val as number;
       return <span className={n >= 0 ? "text-profit font-semibold" : "text-loss font-semibold"}>{formatSilver(n)}</span>;
@@ -126,12 +130,14 @@ export function CraftingTable({ filters }: any) {
     if (col.key === "roi") return <span className={(val as number) >= 40 ? "text-profit" : "text-foreground"}>{val}%</span>;
     if (col.key === "material_cost" || col.key === "sell_price") return formatSilver(val as number);
 
+    // TRADUCCIÓN DE LOS DIARIOS
     if (col.key === "journal") {
       const jName = val as string;
       if (!jName || jName === "---") return <span className="text-muted-foreground">---</span>;
       return <span className="text-muted-foreground whitespace-nowrap">{t(jName, locale)}</span>;
     }
 
+    // TIEMPO ACTUALIZADO (UPDATED) CON COLORES
     if (col.key === "updated_at") {
       const timeStr = getTimeAgo(val as string, locale);
       const isOld = timeStr.includes("d") || timeStr === "Old" || timeStr === "Viejo";
