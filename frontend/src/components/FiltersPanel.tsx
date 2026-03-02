@@ -6,7 +6,9 @@ import { Label } from "@/components/ui/label";
 export function FiltersPanel({ filters, setFilters }: any) {
   const { locale } = useLocale();
 
-  const allCities = ["Black Market", "Caerleon", "Lymhurst", "Bridgewatch", "Martlock", "Thetford", "Fort Sterling", "Brecilien"];
+  // Listas de ciudades con "All" incluido
+  const allTargetCities = ["All", "Black Market", "Caerleon", "Lymhurst", "Bridgewatch", "Martlock", "Thetford", "Fort Sterling", "Brecilien"];
+  const allCraftCities = ["All", "Caerleon", "Lymhurst", "Bridgewatch", "Martlock", "Thetford", "Fort Sterling", "Brecilien"];
   const allTiers = [0, 2, 3, 4, 5, 6, 7, 8];
 
   return (
@@ -42,7 +44,7 @@ export function FiltersPanel({ filters, setFilters }: any) {
         </Label>
       </div>
 
-      {/* Switch: Buy Orders (¡Nuevo y alineado!) */}
+      {/* Switch: Buy Orders */}
       <div className="flex items-center space-x-2">
         <Switch
           id="buy-orders"
@@ -73,7 +75,23 @@ export function FiltersPanel({ filters, setFilters }: any) {
         </select>
       </div>
 
-      {/* Select: City */}
+      {/* NUEVO Select: Crafting City */}
+      <div className="flex items-center gap-2 text-sm">
+        <span className="text-muted-foreground">{t("craftCity", locale) || "Crafting City"}:</span>
+        <select
+          value={filters.craftCity}
+          onChange={(e) => setFilters({ ...filters, craftCity: e.target.value })}
+          className="rounded-md border border-border bg-muted px-2.5 py-1.5 text-sm text-foreground outline-none focus:ring-1 focus:ring-gold cursor-pointer"
+        >
+          {allCraftCities.map((c) => (
+            <option key={c} value={c}>
+              {c === "All" ? (locale === 'es' ? 'Todas' : 'All') : c}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Select: Target City (Con la opción All) */}
       <div className="flex items-center gap-2 text-sm">
         <span className="text-muted-foreground">{t("targetCity", locale)}:</span>
         <select
@@ -81,8 +99,10 @@ export function FiltersPanel({ filters, setFilters }: any) {
           onChange={(e) => setFilters({ ...filters, city: e.target.value })}
           className="rounded-md border border-border bg-muted px-2.5 py-1.5 text-sm text-foreground outline-none focus:ring-1 focus:ring-gold cursor-pointer"
         >
-          {allCities.map((c) => (
-            <option key={c} value={c}>{c}</option>
+          {allTargetCities.map((c) => (
+            <option key={c} value={c}>
+              {c === "All" ? (locale === 'es' ? 'Todas' : 'All') : c}
+            </option>
           ))}
         </select>
       </div>

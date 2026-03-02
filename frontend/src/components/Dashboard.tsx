@@ -13,10 +13,11 @@ export function Dashboard() {
   const { locale } = useLocale();
 
   const [filters, setFilters] = useState({
-    premium: true,
+    premium: false,
     useFocus: false,
     useBuyOrders: false, 
-    city: "Black Market",
+    craftCity: "All",
+    city: "All",
     tier: 0 
   });
 

@@ -78,9 +78,14 @@ export function CraftingTable({ filters }: any) {
       if (!response.ok) throw new Error("Network response was not ok");
       let data = await response.json();
       
-      if (filters?.city) {
+      if (filters?.city && filters.city !== "All") {
          data = data.filter((item: CraftingEntry) => item.sell_city === filters.city);
       }
+      
+      if (filters?.craftCity && filters.craftCity !== "All") {
+         data = data.filter((item: CraftingEntry) => item.craft_city === filters.craftCity);
+      }
+      
       return data;
     },
     refetchInterval: 60000 

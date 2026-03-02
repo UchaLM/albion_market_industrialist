@@ -34,6 +34,7 @@ export const uiLabels: TranslationMap = {
   tipUpdated: { en: "Time since last market price update", es: "Tiempo desde la última actualización del precio en el mercado" },
   updated: { en: "Updated", es: "Actualizado" },
   
+  
 
   // Landing
   heroTitle: { en: "Maximize Your Silver", es: "Maximiza Tu Plata" },
@@ -67,6 +68,7 @@ export const uiLabels: TranslationMap = {
   premiumStatus: { en: "Premium Status", es: "Estado Premium" },
   useFocus: { en: "Use Crafting Focus", es: "Usar Focus de Crafteo" },
   targetCity: { en: "Target City", es: "Ciudad Objetivo" },
+  craftCity: { en: "Crafting City", es: "Ciudad de Crafteo" },
   selectCity: { en: "Select city...", es: "Seleccionar ciudad..." },
 
   // Table headers
