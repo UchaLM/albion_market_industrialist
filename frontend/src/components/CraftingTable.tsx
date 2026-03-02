@@ -108,13 +108,30 @@ export function CraftingTable({ filters }: any) {
   const renderCell = (entry: CraftingEntry, col: (typeof baseColumns)[0]) => {
     const val = entry[col.key];
     
+    if (col.key === "item_name_en") {
+      const name = locale === 'es' ? entry.item_name_es : entry.item_name_en;
+      return <span className="font-medium text-gold">{name}</span>;
+    }
+    
+    if (col.key === "method") {
+      if (val === "Direct") return locale === 'es' ? "Directo" : "Direct";
+      if (val === "Upgrade") return locale === 'es' ? "Mejora" : "Upgrade";
+    }
+
+    if (col.key === "unit_profit" || col.key === "total_profit") {
+      const n = val as number;
+      return <span className={n >= 0 ? "text-profit font-semibold" : "text-loss font-semibold"}>{formatSilver(n)}</span>;
+    }
+    
+    if (col.key === "roi") return <span className={(val as number) >= 40 ? "text-profit" : "text-foreground"}>{val}%</span>;
+    if (col.key === "material_cost" || col.key === "sell_price") return formatSilver(val as number);
+
     if (col.key === "journal") {
       const jName = val as string;
       if (!jName || jName === "---") return <span className="text-muted-foreground">---</span>;
       return <span className="text-muted-foreground whitespace-nowrap">{t(jName, locale)}</span>;
     }
 
-    // ACTUALIZADO: Tiempo traducido y colores
     if (col.key === "updated_at") {
       const timeStr = getTimeAgo(val as string, locale);
       const isOld = timeStr.includes("d") || timeStr === "Old" || timeStr === "Viejo";
