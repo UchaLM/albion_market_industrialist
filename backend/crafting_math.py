@@ -41,31 +41,29 @@ def fetch_market_data(items, target_cities):
         chunk_str = ','.join(items[i:i+BATCH_SIZE])
         
         try:
-            rp = requests.get(f"https://www.albion-online-data.com/api/v2/stats/prices/{chunk_str}?locations={cities_str}")
-            if rp.status_code == 200:
-                for d in rp.json():
-                    iid = d['item_id']
-                    city = d['city']
+            rh = requests.get(f"https://www.albion-online-data.com/api/v2/stats/history/{chunk_str}?locations={cities_str}&time-scale=24&qualities=1")
+            if rh.status_code == 200:
+                for entry in rh.json():
+                    iid = entry['item_id']
+                    city = entry['location']
                     
-                    if iid not in prices: 
-                        prices[iid] = {"sell_offers": {}, "buy_offers": {}}
+                    if iid not in volumes: 
+                        volumes[iid] = {}
+                    
+                    hist = entry.get('data', [])
+                    if hist:
+                        volumes[iid][city] = sum(p['item_count'] for p in hist) / len(hist)
                         
-                    sell_price = d['sell_price_min']
-                    buy_price = d['buy_price_max']
-                    
-                    if sell_price > 0:
-                        current_sell = prices[iid]["sell_offers"].get(city, float('inf'))
-                        if sell_price < current_sell:
-                            prices[iid]["sell_offers"][city] = sell_price
+                        total_silver_spent = sum(p['average_price'] * p['item_count'] for p in hist)
+                        total_items_sold = sum(p['item_count'] for p in hist)
+                        
+                        if total_items_sold > 0:
+                            avg_sold_price = total_silver_spent / total_items_sold
 
-                            if "sell_price_min_date" not in prices[iid]:
-                                prices[iid]["sell_price_min_date"] = {}
-                            prices[iid]["sell_price_min_date"][city] = d.get('sell_price_min_date', "Old")
+                            current_sell_price = prices.get(iid, {}).get("sell_offers", {}).get(city, 0)
                             
-                    if buy_price > 0:
-                        current_buy = prices[iid]["buy_offers"].get(city, 0)
-                        if buy_price > current_buy:
-                            prices[iid]["buy_offers"][city] = buy_price
+                            if current_sell_price > (avg_sold_price * 1.5):
+                                prices[iid]["sell_offers"][city] = avg_sold_price
         except: 
             pass
             
