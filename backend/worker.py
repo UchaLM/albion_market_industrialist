@@ -210,8 +210,8 @@ def process_and_store_items():
                 
                 updated_date = prices.get(target_id, {}).get("sell_price_min_date", {}).get(sell_city, "Old")
 
-                # REGLA RELAJADA: Solo descartamos si nadie lo vende o tiene 0 absoluto de volumen
-                if sell_price <= 0 or mkt_vol < 0.01: continue
+                if sell_price <= 0: continue
+                if tier < 7 and mkt_vol < 0.01: continue
 
                 opportunities_to_upsert.append({
                     "item_id": target_id,

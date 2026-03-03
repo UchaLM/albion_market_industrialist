@@ -55,7 +55,6 @@ def fetch_market_data(items, target_cities):
                         if iid not in prices: 
                             prices[iid] = {"sell_offers": {}, "buy_offers": {}}
                             
-                        # Blindaje contra Nulos
                         sell_price = float(d.get('sell_price_min') or 0)
                         buy_price = float(d.get('buy_price_max') or 0)
                         
@@ -72,13 +71,12 @@ def fetch_market_data(items, target_cities):
                             if buy_price > current_buy:
                                 prices[iid]["buy_offers"][city] = buy_price
                     except Exception:
-                        pass # Si un precio viene roto, lo ignora y sigue
+                        pass
         except: 
             pass
             
-        # 2. FETCH HISTORIAL (Escudo Antitrolls y Autocompletado Blindado)
         try:
-            rh = requests.get(f"https://www.albion-online-data.com/api/v2/stats/history/{chunk_str}?locations={cities_str}&time-scale=24")
+            rh = requests.get(f"https://www.albion-online-data.com/api/v2/stats/history/{chunk_str}?locations={cities_str}&time-scale=24&qualities=1")
             if rh.status_code == 200:
                 temp_silver = {}
                 temp_items = {}
@@ -94,7 +92,6 @@ def fetch_market_data(items, target_cities):
                         hist = entry.get('data', [])
                         if hist: 
                             days = max(1, len(hist))
-                            # Convertimos explícitamente a float para evitar que 'None' rompa la matemática
                             vol = sum(float(p.get('item_count') or 0) for p in hist) / days
                             volumes[iid][city] = volumes[iid].get(city, 0) + vol
                             
@@ -102,9 +99,8 @@ def fetch_market_data(items, target_cities):
                             temp_silver[key] = temp_silver.get(key, 0) + sum(float(p.get('item_count') or 0) * float(p.get('average_price') or 0) for p in hist)
                             temp_items[key] = temp_items.get(key, 0) + sum(float(p.get('item_count') or 0) for p in hist)
                     except Exception:
-                        pass # Protege el ciclo de un ítem corrupto
+                        pass 
 
-                # Aplicamos el Escudo Matemático
                 for key, total_qty in temp_items.items():
                     try:
                         if total_qty > 0:
@@ -116,7 +112,6 @@ def fetch_market_data(items, target_cities):
                                 
                             current_sell = float(prices[iid]["sell_offers"].get(city, 0))
                             
-                            # Escudo: > 2.5x
                             if current_sell == 0 or current_sell > (avg_price * 2.5):
                                 prices[iid]["sell_offers"][city] = avg_price
                     except Exception:
@@ -124,7 +119,6 @@ def fetch_market_data(items, target_cities):
         except: 
             pass
             
-        # El anti-baneo (súper importante no borrarlo)
         time.sleep(0.4)
         
     return prices, volumes
