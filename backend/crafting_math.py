@@ -36,7 +36,7 @@ def get_official_names():
 def fetch_market_data(items, target_cities):
     prices, volumes = {}, {}
     
-    # FIX: Limpiamos ciudades duplicadas para no romper la API de Albion
+    # Limpiamos ciudades duplicadas para no romper la API de Albion
     unique_cities = list(set(target_cities))
     cities_str = ",".join(unique_cities)
     
@@ -73,25 +73,44 @@ def fetch_market_data(items, target_cities):
         except: 
             pass
             
-        # 2. FETCH VOLUMEN
         try:
-            # FIX: Sacamos qualities=1 para que pase el Tier 8
             rh = requests.get(f"https://www.albion-online-data.com/api/v2/stats/history/{chunk_str}?locations={cities_str}&time-scale=24")
             if rh.status_code == 200:
+                temp_silver = {}
+                temp_items = {}
+                
                 for entry in rh.json():
                     iid = entry.get('item_id')
                     city = entry.get('location')
                     if not iid or not city: continue
+                    
                     if iid not in volumes: volumes[iid] = {}
+                    
                     hist = entry.get('data', [])
                     if hist: 
-                        # Sumamos el volumen de todas las calidades
-                        vol = sum(p.get('item_count', 0) for p in hist) / max(1, len(hist))
+                        days = max(1, len(hist))
+                        vol = sum(p.get('item_count', 0) for p in hist) / days
                         volumes[iid][city] = volumes[iid].get(city, 0) + vol
+                        
+                        key = f"{iid}|{city}"
+                        temp_silver[key] = temp_silver.get(key, 0) + sum(p.get('item_count', 0) * p.get('average_price', 0) for p in hist)
+                        temp_items[key] = temp_items.get(key, 0) + sum(p.get('item_count', 0) for p in hist)
+
+                for key, total_qty in temp_items.items():
+                    if total_qty > 0:
+                        iid, city = key.split("|")
+                        avg_price = temp_silver[key] / total_qty
+                        
+                        if iid not in prices:
+                            prices[iid] = {"sell_offers": {}, "buy_offers": {}}
+                            
+                        current_sell = prices[iid]["sell_offers"].get(city, 0)
+                        
+                        if current_sell == 0 or current_sell > (avg_price * 2):
+                            prices[iid]["sell_offers"][city] = avg_price
         except: 
             pass
             
-        # FIX: Dormimos 0.4s para evitar el HTTP 429 Rate Limit
         time.sleep(0.4)
         
     return prices, volumes
