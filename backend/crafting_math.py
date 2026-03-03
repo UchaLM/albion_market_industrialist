@@ -65,8 +65,8 @@ def fetch_market_data(items, target_cities):
                                 prices[iid] = {"sell_offers": {}, "buy_offers": {}}
                                 
                             current_sell_price = prices[iid]["sell_offers"].get(city, 0)
-                            
-                            if current_sell_price > (avg_sold_price * 2):
+
+                            if current_sell_price == 0 or current_sell_price > (avg_sold_price * 2):
                                 prices[iid]["sell_offers"][city] = avg_sold_price
         except: 
             pass
