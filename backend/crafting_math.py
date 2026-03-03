@@ -40,34 +40,15 @@ def fetch_market_data(items, target_cities):
     for i in range(0, len(items), BATCH_SIZE):
         chunk_str = ','.join(items[i:i+BATCH_SIZE])
         
-        # 2. FETCH HISTORIAL (Volumen y Precio Promedio Real de Venta)
         try:
             rh = requests.get(f"https://www.albion-online-data.com/api/v2/stats/history/{chunk_str}?locations={cities_str}&time-scale=24&qualities=1")
             if rh.status_code == 200:
                 for entry in rh.json():
                     iid = entry['item_id']
-                    city = entry['location']
-                    
-                    if iid not in volumes: 
-                        volumes[iid] = {}
-                    
+                    if iid not in volumes: volumes[iid] = {}
                     hist = entry.get('data', [])
-                    if hist:
-                        volumes[iid][city] = sum(p['item_count'] for p in hist) / len(hist)
-                        
-                        total_silver_spent = sum(p['average_price'] * p['item_count'] for p in hist)
-                        total_items_sold = sum(p['item_count'] for p in hist)
-                        
-                        if total_items_sold > 0:
-                            avg_sold_price = total_silver_spent / total_items_sold
-                            
-                            if iid not in prices:
-                                prices[iid] = {"sell_offers": {}, "buy_offers": {}}
-                                
-                            current_sell_price = prices[iid]["sell_offers"].get(city, 0)
-
-                            if current_sell_price == 0 or current_sell_price > (avg_sold_price * 2):
-                                prices[iid]["sell_offers"][city] = avg_sold_price
+                    if hist: 
+                        volumes[iid][entry['location']] = sum(p['item_count'] for p in hist) / len(hist)
         except: 
             pass
             
