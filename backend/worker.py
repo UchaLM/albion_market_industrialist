@@ -20,11 +20,9 @@ def process_and_store_items():
     recipes_db = load_recipes()
     name_map = get_official_names()
     
-    # Generate items dynamically from JSON (Up to T8)
     filtered_targets = generate_target_items(recipes_db, max_tier=8)
-    
-    # Build shopping list
     shopping_list = set(filtered_targets)
+    
     for t in filtered_targets:
         base = t.split("@")[0]
         ench = int(t.split("@")[1]) if "@" in t else 0
@@ -42,7 +40,7 @@ def process_and_store_items():
 
     extras = []
     journals = ["WARRIOR", "HUNTER", "MAGE", "TOOLMAKER"]
-    for tier in range(2, 9):
+    for tier in range(2, 9): 
         extras.extend([f"T{tier}_RUNE", f"T{tier}_SOUL", f"T{tier}_RELIC"])
         for j in journals:
             extras.extend([f"T{tier}_JOURNAL_{j}_EMPTY", f"T{tier}_JOURNAL_{j}_FULL"])
@@ -195,7 +193,6 @@ def process_and_store_items():
             if (best_ret_sell == float('inf') and best_non_sell == float('inf')) and (best_ret_buy == float('inf') and best_non_buy == float('inf')): 
                 continue
 
-            # Journal Math
             raw_j_profit = 0.0
             if tier in RESOURCE_FAME and total_resources_unit > 0 and journal_full_name:
                 item_fame = total_resources_unit * RESOURCE_FAME[tier]
@@ -210,8 +207,11 @@ def process_and_store_items():
             for sell_city in SELL_CITIES:
                 sell_price = prices.get(target_id, {}).get("sell_offers", {}).get(sell_city, 0)
                 mkt_vol = volumes.get(target_id, {}).get(sell_city, 0)
+                
                 updated_date = prices.get(target_id, {}).get("sell_price_min_date", {}).get(sell_city, "Old")
-                if sell_price <= 0 or mkt_vol < 0.1: continue
+
+                # REGLA RELAJADA: Solo descartamos si nadie lo vende o tiene 0 absoluto de volumen
+                if sell_price <= 0 or mkt_vol < 0.01: continue
 
                 opportunities_to_upsert.append({
                     "item_id": target_id,
@@ -253,7 +253,6 @@ def process_and_store_items():
                 "item_value": stmt.excluded.item_value,
                 "volume": stmt.excluded.volume,
                 "updated_at": stmt.excluded.updated_at
-                
             }
             
             stmt = stmt.on_conflict_do_update(

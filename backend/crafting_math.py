@@ -35,50 +35,64 @@ def get_official_names():
 
 def fetch_market_data(items, target_cities):
     prices, volumes = {}, {}
-    cities_str = ",".join(target_cities)
+    
+    # FIX: Limpiamos ciudades duplicadas para no romper la API de Albion
+    unique_cities = list(set(target_cities))
+    cities_str = ",".join(unique_cities)
     
     for i in range(0, len(items), BATCH_SIZE):
         chunk_str = ','.join(items[i:i+BATCH_SIZE])
         
+        # 1. FETCH PRECIOS
         try:
-            rh = requests.get(f"https://www.albion-online-data.com/api/v2/stats/history/{chunk_str}?locations={cities_str}&time-scale=24&qualities=1")
-            if rh.status_code == 200:
-                for entry in rh.json():
-                    iid = entry['item_id']
-                    city = entry['location']
+            rp = requests.get(f"https://www.albion-online-data.com/api/v2/stats/prices/{chunk_str}?locations={cities_str}")
+            if rp.status_code == 200:
+                for d in rp.json():
+                    iid = d['item_id']
+                    city = d['city']
                     
-                    if iid not in volumes: 
-                        volumes[iid] = {}
+                    if iid not in prices: 
+                        prices[iid] = {"sell_offers": {}, "buy_offers": {}}
+                        
+                    sell_price = d['sell_price_min']
+                    buy_price = d['buy_price_max']
                     
-                    hist = entry.get('data', [])
-                    if hist:
-                        volumes[iid][city] = sum(p['item_count'] for p in hist) / len(hist)
-                        
-                        total_silver_spent = sum(p['average_price'] * p['item_count'] for p in hist)
-                        total_items_sold = sum(p['item_count'] for p in hist)
-                        
-                        if total_items_sold > 0:
-                            avg_sold_price = total_silver_spent / total_items_sold
-
-                            current_sell_price = prices.get(iid, {}).get("sell_offers", {}).get(city, 0)
+                    if sell_price > 0:
+                        current_sell = prices[iid]["sell_offers"].get(city, float('inf'))
+                        if sell_price < current_sell:
+                            prices[iid]["sell_offers"][city] = sell_price
+                            # Atrapamos la fecha para el Frontend
+                            if "sell_price_min_date" not in prices[iid]:
+                                prices[iid]["sell_price_min_date"] = {}
+                            prices[iid]["sell_price_min_date"][city] = d.get('sell_price_min_date', "Old")
                             
-                            if current_sell_price > (avg_sold_price * 1.5):
-                                prices[iid]["sell_offers"][city] = avg_sold_price
+                    if buy_price > 0:
+                        current_buy = prices[iid]["buy_offers"].get(city, 0)
+                        if buy_price > current_buy:
+                            prices[iid]["buy_offers"][city] = buy_price
         except: 
             pass
             
+        # 2. FETCH VOLUMEN
         try:
-            rh = requests.get(f"https://www.albion-online-data.com/api/v2/stats/history/{chunk_str}?locations={cities_str}&time-scale=24&qualities=1")
+            # FIX: Sacamos qualities=1 para que pase el Tier 8
+            rh = requests.get(f"https://www.albion-online-data.com/api/v2/stats/history/{chunk_str}?locations={cities_str}&time-scale=24")
             if rh.status_code == 200:
                 for entry in rh.json():
-                    iid = entry['item_id']
+                    iid = entry.get('item_id')
+                    city = entry.get('location')
+                    if not iid or not city: continue
                     if iid not in volumes: volumes[iid] = {}
                     hist = entry.get('data', [])
-                    if hist: volumes[iid][entry['location']] = sum(p['item_count'] for p in hist) / len(hist)
+                    if hist: 
+                        # Sumamos el volumen de todas las calidades
+                        vol = sum(p.get('item_count', 0) for p in hist) / max(1, len(hist))
+                        volumes[iid][city] = volumes[iid].get(city, 0) + vol
         except: 
             pass
             
-        time.sleep(0.05)
+        # FIX: Dormimos 0.4s para evitar el HTTP 429 Rate Limit
+        time.sleep(0.4)
         
     return prices, volumes
 
