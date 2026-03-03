@@ -40,6 +40,7 @@ def fetch_market_data(items, target_cities):
     for i in range(0, len(items), BATCH_SIZE):
         chunk_str = ','.join(items[i:i+BATCH_SIZE])
         
+        # 2. FETCH HISTORIAL (Volumen y Precio Promedio Real de Venta)
         try:
             rh = requests.get(f"https://www.albion-online-data.com/api/v2/stats/history/{chunk_str}?locations={cities_str}&time-scale=24&qualities=1")
             if rh.status_code == 200:
@@ -59,10 +60,13 @@ def fetch_market_data(items, target_cities):
                         
                         if total_items_sold > 0:
                             avg_sold_price = total_silver_spent / total_items_sold
-
-                            current_sell_price = prices.get(iid, {}).get("sell_offers", {}).get(city, 0)
                             
-                            if current_sell_price > (avg_sold_price * 1.5):
+                            if iid not in prices:
+                                prices[iid] = {"sell_offers": {}, "buy_offers": {}}
+                                
+                            current_sell_price = prices[iid]["sell_offers"].get(city, 0)
+                            
+                            if current_sell_price > (avg_sold_price * 2):
                                 prices[iid]["sell_offers"][city] = avg_sold_price
         except: 
             pass
