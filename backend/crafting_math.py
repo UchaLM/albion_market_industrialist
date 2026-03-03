@@ -45,10 +45,25 @@ def fetch_market_data(items, target_cities):
             if rh.status_code == 200:
                 for entry in rh.json():
                     iid = entry['item_id']
-                    if iid not in volumes: volumes[iid] = {}
+                    city = entry['location']
+                    
+                    if iid not in volumes: 
+                        volumes[iid] = {}
+                    
                     hist = entry.get('data', [])
-                    if hist: 
-                        volumes[iid][entry['location']] = sum(p['item_count'] for p in hist) / len(hist)
+                    if hist:
+                        volumes[iid][city] = sum(p['item_count'] for p in hist) / len(hist)
+                        
+                        total_silver_spent = sum(p['average_price'] * p['item_count'] for p in hist)
+                        total_items_sold = sum(p['item_count'] for p in hist)
+                        
+                        if total_items_sold > 0:
+                            avg_sold_price = total_silver_spent / total_items_sold
+
+                            current_sell_price = prices.get(iid, {}).get("sell_offers", {}).get(city, 0)
+                            
+                            if current_sell_price > (avg_sold_price * 1.5):
+                                prices[iid]["sell_offers"][city] = avg_sold_price
         except: 
             pass
             
