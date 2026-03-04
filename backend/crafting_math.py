@@ -47,78 +47,47 @@ def fetch_market_data(items, target_cities):
             rp = requests.get(f"https://www.albion-online-data.com/api/v2/stats/prices/{chunk_str}?locations={cities_str}")
             if rp.status_code == 200:
                 for d in rp.json():
-                    try:
-                        iid = d.get('item_id')
-                        city = d.get('city')
-                        if not iid or not city: continue
+                    iid = d['item_id']
+                    city = d['city']
+                    
+                    if iid not in prices: 
+                        prices[iid] = {"sell_offers": {}, "buy_offers": {}}
                         
-                        if iid not in prices: 
-                            prices[iid] = {"sell_offers": {}, "buy_offers": {}}
+                    sell_price = d['sell_price_min']
+                    buy_price = d['buy_price_max']
+                    
+                    if sell_price > 0:
+                        current_sell = prices[iid]["sell_offers"].get(city, float('inf'))
+                        if sell_price < current_sell:
+                            prices[iid]["sell_offers"][city] = sell_price
+                            if "sell_price_min_date" not in prices[iid]:
+                                prices[iid]["sell_price_min_date"] = {}
+                            prices[iid]["sell_price_min_date"][city] = d.get('sell_price_min_date', "Old")
                             
-                        sell_price = float(d.get('sell_price_min') or 0)
-                        buy_price = float(d.get('buy_price_max') or 0)
-                        
-                        if sell_price > 0:
-                            current_sell = float(prices[iid]["sell_offers"].get(city, float('inf')))
-                            if sell_price < current_sell:
-                                prices[iid]["sell_offers"][city] = sell_price
-                                if "sell_price_min_date" not in prices[iid]:
-                                    prices[iid]["sell_price_min_date"] = {}
-                                prices[iid]["sell_price_min_date"][city] = d.get('sell_price_min_date', "Old")
-                                
-                        if buy_price > 0:
-                            current_buy = float(prices[iid]["buy_offers"].get(city, 0))
-                            if buy_price > current_buy:
-                                prices[iid]["buy_offers"][city] = buy_price
-                    except Exception:
-                        pass
+                    if buy_price > 0:
+                        current_buy = prices[iid]["buy_offers"].get(city, 0)
+                        if buy_price > current_buy:
+                            prices[iid]["buy_offers"][city] = buy_price
         except: 
             pass
             
+        # 2. FETCH VOLUMEN (Estable, sin escudo anti-trolls, permitiendo T8)
         try:
-            rh = requests.get(f"https://www.albion-online-data.com/api/v2/stats/history/{chunk_str}?locations={cities_str}&time-scale=24&qualities=1")
+            rh = requests.get(f"https://www.albion-online-data.com/api/v2/stats/history/{chunk_str}?locations={cities_str}&time-scale=24")
             if rh.status_code == 200:
-                temp_silver = {}
-                temp_items = {}
-                
                 for entry in rh.json():
-                    try:
-                        iid = entry.get('item_id')
-                        city = entry.get('location')
-                        if not iid or not city: continue
-                        
-                        if iid not in volumes: volumes[iid] = {}
-                        
-                        hist = entry.get('data', [])
-                        if hist: 
-                            days = max(1, len(hist))
-                            vol = sum(float(p.get('item_count') or 0) for p in hist) / days
-                            volumes[iid][city] = volumes[iid].get(city, 0) + vol
-                            
-                            key = f"{iid}|{city}"
-                            temp_silver[key] = temp_silver.get(key, 0) + sum(float(p.get('item_count') or 0) * float(p.get('average_price') or 0) for p in hist)
-                            temp_items[key] = temp_items.get(key, 0) + sum(float(p.get('item_count') or 0) for p in hist)
-                    except Exception:
-                        pass 
-
-                for key, total_qty in temp_items.items():
-                    try:
-                        if total_qty > 0:
-                            iid, city = key.split("|")
-                            avg_price = temp_silver[key] / total_qty
-                            
-                            if iid not in prices:
-                                prices[iid] = {"sell_offers": {}, "buy_offers": {}}
-                                
-                            current_sell = float(prices[iid]["sell_offers"].get(city, 0))
-                            
-                            if current_sell == 0 or current_sell > (avg_price * 2.5):
-                                prices[iid]["sell_offers"][city] = avg_price
-                    except Exception:
-                        pass
+                    iid = entry.get('item_id')
+                    city = entry.get('location')
+                    if not iid or not city: continue
+                    if iid not in volumes: volumes[iid] = {}
+                    hist = entry.get('data', [])
+                    if hist: 
+                        vol = sum(p.get('item_count', 0) for p in hist) / max(1, len(hist))
+                        volumes[iid][city] = volumes[iid].get(city, 0) + vol
         except: 
             pass
             
+        # Pausa vital para que Render no nos banee
         time.sleep(0.4)
         
     return prices, volumes
