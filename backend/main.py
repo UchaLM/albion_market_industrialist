@@ -5,6 +5,7 @@ from typing import List
 
 from database import get_db, engine
 from models import CraftingOpportunity, Base
+from models import FlippingOpportunity
 import schemas
 from crafting_math import get_bonus_city
 
@@ -135,3 +136,54 @@ def get_crafting_profits(
     results = [route["data"] for route in best_routes.values()]
     results.sort(key=lambda x: x.total_profit, reverse=True)
     return results[:limit]
+
+@app.get("/api/flipping-profits")
+def get_flipping_profits(
+    use_premium: bool = True,
+    use_sell_orders: bool = True,
+    tier: int = 0,
+    limit: int = 500,
+    db: Session = Depends(get_db)
+):
+    query = db.query(FlippingOpportunity)
+    
+    if tier > 0:
+        query = query.filter(FlippingOpportunity.tier == tier)
+        
+    if use_sell_orders:
+        tax = 0.065 if use_premium else 0.105
+        target_price_col = FlippingOpportunity.sell_price_min
+    else:
+        tax = 0.04 if use_premium else 0.08
+        target_price_col = FlippingOpportunity.buy_price_max
+        
+    profit_expr = (target_price_col * (1 - tax)) - FlippingOpportunity.buy_price
+    
+    query = query.filter(target_price_col > 0)
+    query = query.filter(profit_expr > 0)
+    query = query.order_by(profit_expr.desc())
+        
+    results = query.limit(limit).all()
+    
+    response = []
+    for r in results:
+        target_price = r.sell_price_min if use_sell_orders else r.buy_price_max
+        profit = (target_price * (1 - tax)) - r.buy_price
+        roi = (profit / r.buy_price) * 100 if r.buy_price > 0 else 0
+        
+        response.append({
+            "item_id": r.item_id,
+            "item_name_en": r.item_name_en,
+            "item_name_es": r.item_name_es,
+            "tier": r.tier,
+            "buy_city": r.buy_city,
+            "sell_city": r.sell_city,
+            "buy_price": r.buy_price,
+            "sell_price": target_price,
+            "profit": profit,
+            "roi": roi,
+            "volume": r.volume,
+            "updated_at": r.updated_at
+        })
+        
+    return response

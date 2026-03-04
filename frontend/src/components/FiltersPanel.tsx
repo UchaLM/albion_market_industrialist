@@ -6,60 +6,68 @@ import { Label } from "@/components/ui/label";
 export function FiltersPanel({ filters, setFilters }: any) {
   const { locale } = useLocale();
 
-  // Listas de ciudades con "All" incluido
   const allTargetCities = ["All", "Black Market", "Caerleon", "Lymhurst", "Bridgewatch", "Martlock", "Thetford", "Fort Sterling", "Brecilien"];
   const allCraftCities = ["All", "Caerleon", "Lymhurst", "Bridgewatch", "Martlock", "Thetford", "Fort Sterling", "Brecilien"];
   const allTiers = [0, 2, 3, 4, 5, 6, 7, 8];
 
+  const isFlipping = filters.mode === 'flipping';
+
   return (
     <div className="flex flex-wrap items-center gap-6 rounded-lg border border-border bg-card p-4">
       
-      {/* Switch: Premium */}
+      {/* Premium (Compartido en ambas) */}
       <div className="flex items-center space-x-2">
         <Switch
           id="premium"
           checked={filters.premium}
           onCheckedChange={(c) => setFilters({ ...filters, premium: c })}
         />
-        <Label 
-          htmlFor="premium" 
-          className={`cursor-pointer ${filters.premium ? "text-gold font-medium" : "text-muted-foreground font-normal"}`}
-        >
+        <Label htmlFor="premium" className={`cursor-pointer ${filters.premium ? "text-gold font-medium" : "text-muted-foreground font-normal"}`}>
           {t("premiumStatus", locale)}
         </Label>
       </div>
 
-      {/* Switch: Focus */}
-      <div className="flex items-center space-x-2">
-        <Switch
-          id="focus"
-          checked={filters.useFocus}
-          onCheckedChange={(c) => setFilters({ ...filters, useFocus: c })}
-        />
-        <Label 
-          htmlFor="focus" 
-          className={`cursor-pointer ${filters.useFocus ? "text-gold font-medium" : "text-muted-foreground font-normal"}`}
-        >
-          {t("useFocus", locale)}
-        </Label>
-      </div>
+      {/* Filtros exclusivos de CRAFTEO */}
+      {!isFlipping && (
+        <>
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="focus"
+              checked={filters.useFocus}
+              onCheckedChange={(c) => setFilters({ ...filters, useFocus: c })}
+            />
+            <Label htmlFor="focus" className={`cursor-pointer ${filters.useFocus ? "text-gold font-medium" : "text-muted-foreground font-normal"}`}>
+              {t("useFocus", locale)}
+            </Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="buy-orders"
+              checked={filters.useBuyOrders}
+              onCheckedChange={(c) => setFilters({ ...filters, useBuyOrders: c })}
+            />
+            <Label htmlFor="buy-orders" className={`cursor-pointer ${filters.useBuyOrders ? "text-gold font-medium" : "text-muted-foreground font-normal"}`}>
+              {t("useBuyOrders", locale)}
+            </Label>
+          </div>
+        </>
+      )}
 
-      {/* Switch: Buy Orders */}
-      <div className="flex items-center space-x-2">
-        <Switch
-          id="buy-orders"
-          checked={filters.useBuyOrders}
-          onCheckedChange={(c) => setFilters({ ...filters, useBuyOrders: c })}
-        />
-        <Label 
-          htmlFor="buy-orders" 
-          className={`cursor-pointer ${filters.useBuyOrders ? "text-gold font-medium" : "text-muted-foreground font-normal"}`}
-        >
-          {t("useBuyOrders", locale)}
-        </Label>
-      </div>
+      {/* Filtros exclusivos de FLIPPING */}
+      {isFlipping && (
+        <div className="flex items-center space-x-2">
+          <Switch
+            id="sell-orders"
+            checked={filters.useSellOrders}
+            onCheckedChange={(c) => setFilters({ ...filters, useSellOrders: c })}
+          />
+          <Label htmlFor="sell-orders" className={`cursor-pointer ${filters.useSellOrders ? "text-gold font-medium" : "text-muted-foreground font-normal"}`}>
+            {t("useSellOrders", locale) || "Sell Orders"}
+          </Label>
+        </div>
+      )}
 
-      {/* Select: Tier */}
+      {/* Tier (Compartido) */}
       <div className="flex items-center gap-2 text-sm ml-auto">
         <span className="text-muted-foreground">Tier:</span>
         <select
@@ -75,23 +83,26 @@ export function FiltersPanel({ filters, setFilters }: any) {
         </select>
       </div>
 
-      {/* NUEVO Select: Crafting City */}
+      {/* Ciudad 1: Crafting o Buy City */}
       <div className="flex items-center gap-2 text-sm">
-        <span className="text-muted-foreground">{t("craftCity", locale) || "Crafting City"}:</span>
+        <span className="text-muted-foreground">
+          {isFlipping ? (t("buyCity", locale) || "Buy City") : t("craftCity", locale)}:
+        </span>
         <select
-          value={filters.craftCity}
-          onChange={(e) => setFilters({ ...filters, craftCity: e.target.value })}
+          value={isFlipping ? filters.buyCity : filters.craftCity}
+          onChange={(e) => {
+            if (isFlipping) setFilters({ ...filters, buyCity: e.target.value });
+            else setFilters({ ...filters, craftCity: e.target.value });
+          }}
           className="rounded-md border border-border bg-muted px-2.5 py-1.5 text-sm text-foreground outline-none focus:ring-1 focus:ring-gold cursor-pointer"
         >
           {allCraftCities.map((c) => (
-            <option key={c} value={c}>
-              {c === "All" ? (locale === 'es' ? 'Todas' : 'All') : c}
-            </option>
+            <option key={c} value={c}>{c === "All" ? (locale === 'es' ? 'Todas' : 'All') : c}</option>
           ))}
         </select>
       </div>
 
-      {/* Select: Target City (Con la opción All) */}
+      {/* Ciudad 2: Sell City (Compartido) */}
       <div className="flex items-center gap-2 text-sm">
         <span className="text-muted-foreground">{t("targetCity", locale)}:</span>
         <select
@@ -100,9 +111,7 @@ export function FiltersPanel({ filters, setFilters }: any) {
           className="rounded-md border border-border bg-muted px-2.5 py-1.5 text-sm text-foreground outline-none focus:ring-1 focus:ring-gold cursor-pointer"
         >
           {allTargetCities.map((c) => (
-            <option key={c} value={c}>
-              {c === "All" ? (locale === 'es' ? 'Todas' : 'All') : c}
-            </option>
+            <option key={c} value={c}>{c === "All" ? (locale === 'es' ? 'Todas' : 'All') : c}</option>
           ))}
         </select>
       </div>

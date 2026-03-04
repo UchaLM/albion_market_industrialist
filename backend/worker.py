@@ -1,7 +1,7 @@
 import logging
 from sqlalchemy.dialects.sqlite import insert
 from database import SessionLocal, engine
-from models import CraftingOpportunity, Base
+from models import CraftingOpportunity, FlippingOpportunity, Base
 from crafting_math import (
     load_recipes, get_official_names, fetch_market_data,
     resolve_ingredient, is_refinable_resource, get_enchant_amount,
@@ -81,7 +81,6 @@ def process_and_store_items():
         item_name_es = name_map.get(base_id, {}).get("es", base_id) + ench_suffix
 
         for craft_city in CRAFT_CITIES:
-
             total_resources_unit = 0
             dir_ret_sell, dir_non_sell = 0, 0
             dir_ret_buy, dir_non_buy = 0, 0
@@ -126,10 +125,8 @@ def process_and_store_items():
                 for ing in res_list_base:
                     u_name = get_val(ing, "uniquename")
                     count = float(get_val(ing, "count") or 1)
-                    
                     p_sell = get_price(prices, u_name, craft_city, False)
                     p_buy = get_price(prices, u_name, craft_city, True)
-                    
                     is_ret = is_refinable_resource(u_name)
                     
                     if p_sell <= 0: poss_upg_sell = False
@@ -207,10 +204,8 @@ def process_and_store_items():
             for sell_city in SELL_CITIES:
                 sell_price = prices.get(target_id, {}).get("sell_offers", {}).get(sell_city, 0)
                 mkt_vol = volumes.get(target_id, {}).get(sell_city, 0)
-                
                 updated_date = prices.get(target_id, {}).get("sell_price_min_date", {}).get(sell_city, "Old")
 
-                # REGLA ESTABLE: La que andaba a la perfección (0.01 de volumen, sin inventos de VIP)
                 if sell_price <= 0 or mkt_vol < 0.01: continue
 
                 opportunities_to_upsert.append({
@@ -233,15 +228,63 @@ def process_and_store_items():
                     "updated_at": updated_date
                 })
 
+    # ==========================================
+    # CÁLCULO MARKET FLIPPER
+    # ==========================================
+    flipping_opportunities = []
+    ALL_CITIES = list(set(CRAFT_CITIES + SELL_CITIES))
+    
+    for item_id in shopping_list:
+        try:
+            tier_str = [p for p in item_id.split('_') if p.startswith('T') and len(p) == 2]
+            tier = int(tier_str[0][1]) if tier_str else 0
+        except:
+            tier = 0
+            
+        base_id = item_id.split("@")[0]
+        ench_lvl = int(item_id.split("@")[1]) if "@" in item_id else 0
+        ench_suffix = f" .{ench_lvl}" if ench_lvl > 0 else ""
+        item_name_en = name_map.get(base_id, {}).get("en", base_id) + ench_suffix
+        item_name_es = name_map.get(base_id, {}).get("es", base_id) + ench_suffix
+
+        for buy_city in ALL_CITIES:
+            for sell_city in ALL_CITIES:
+                if buy_city == sell_city: continue
+                
+                # Compramos siempre del Sell Order más barato en la ciudad origen
+                buy_price = float(prices.get(item_id, {}).get("sell_offers", {}).get(buy_city, 0))
+                
+                # Obtenemos AMBOS precios de la ciudad destino
+                sell_price_min = float(prices.get(item_id, {}).get("sell_offers", {}).get(sell_city, 0))
+                buy_price_max = float(prices.get(item_id, {}).get("buy_offers", {}).get(sell_city, 0))
+                
+                mkt_vol = float(volumes.get(item_id, {}).get(sell_city, 0))
+                updated_date = prices.get(item_id, {}).get("sell_price_min_date", {}).get(sell_city, "Old")
+
+                if buy_price <= 0 or mkt_vol < 0.01: continue
+                if sell_price_min <= 0 and buy_price_max <= 0: continue
+                
+                flipping_opportunities.append({
+                    "item_id": item_id,
+                    "buy_city": buy_city,
+                    "sell_city": sell_city,
+                    "item_name_en": item_name_en,
+                    "item_name_es": item_name_es,
+                    "tier": tier,
+                    "buy_price": buy_price,
+                    "sell_price_min": sell_price_min,
+                    "buy_price_max": buy_price_max,
+                    "volume": mkt_vol,
+                    "updated_at": updated_date
+                })
+
+    CHUNK_SIZE = 500
+    
     if opportunities_to_upsert:
-        logging.info(f"Preparing to upsert {len(opportunities_to_upsert)} routes to the database...")
-        
-        CHUNK_SIZE = 500
+        logging.info(f"Preparing to upsert {len(opportunities_to_upsert)} Crafting routes...")
         for i in range(0, len(opportunities_to_upsert), CHUNK_SIZE):
             chunk = opportunities_to_upsert[i : i + CHUNK_SIZE]
-            
             stmt = insert(CraftingOpportunity).values(chunk)
-            
             update_dict = {
                 "method": stmt.excluded.method,
                 "item_sell_price": stmt.excluded.item_sell_price,
@@ -254,16 +297,31 @@ def process_and_store_items():
                 "volume": stmt.excluded.volume,
                 "updated_at": stmt.excluded.updated_at
             }
-            
             stmt = stmt.on_conflict_do_update(
                 index_elements=['item_id', 'craft_city', 'sell_city'], 
                 set_=update_dict
             )
-            
             db.execute(stmt)
             
-        db.commit()
-    
+    if flipping_opportunities:
+        logging.info(f"Preparing to upsert {len(flipping_opportunities)} Flipping routes...")
+        for i in range(0, len(flipping_opportunities), CHUNK_SIZE):
+            chunk = flipping_opportunities[i : i + CHUNK_SIZE]
+            stmt = insert(FlippingOpportunity).values(chunk)
+            update_dict = {
+                "buy_price": stmt.excluded.buy_price,
+                "sell_price_min": stmt.excluded.sell_price_min,
+                "buy_price_max": stmt.excluded.buy_price_max,
+                "volume": stmt.excluded.volume,
+                "updated_at": stmt.excluded.updated_at
+            }
+            stmt = stmt.on_conflict_do_update(
+                index_elements=['item_id', 'buy_city', 'sell_city'], 
+                set_=update_dict
+            )
+            db.execute(stmt)
+
+    db.commit()
     db.close()
     logging.info("Sync complete.")
 

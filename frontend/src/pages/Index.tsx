@@ -1,26 +1,21 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { LandingPage } from "@/components/LandingPage";
-import { Dashboard } from "@/components/Dashboard";
 import { TopBar } from "@/components/TopBar";
 import { SideMenu } from "@/components/SideMenu";
 
-type View = "landing" | "dashboard";
-
 const Index = () => {
-  const [view, setView] = useState<View>("landing");
   const [menuOpen, setMenuOpen] = useState(false);
+  const navigate = useNavigate();
 
-  if (view === "landing") {
-    return (
-      <div className="min-h-screen flex flex-col">
-        <TopBar onMenuOpen={() => setMenuOpen(true)} />
-        <SideMenu open={menuOpen} onClose={() => setMenuOpen(false)} />
-        <LandingPage onNavigate={() => setView("dashboard")} />
-      </div>
-    );
-  }
-
-  return <Dashboard />;
+  return (
+    <div className="min-h-screen flex flex-col">
+      <TopBar onMenuOpen={() => setMenuOpen(true)} />
+      <SideMenu open={menuOpen} onClose={() => setMenuOpen(false)} />
+      {/* Al hacer clic en el botón de la Landing, viajamos a la ruta real */}
+      <LandingPage onNavigate={() => navigate('/crafting')} />
+    </div>
+  );
 };
 
 export default Index;

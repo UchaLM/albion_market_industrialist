@@ -4,9 +4,11 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { LocaleProvider } from "@/contexts/LocaleContext";
-import { Analytics } from "@vercel/analytics/react"; // <-- 1. Importamos Analytics
+import { Analytics } from "@vercel/analytics/react";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
+import MarketFlipper from "./pages/MarketFlipper";
+import { Dashboard } from "./components/Dashboard"; // <-- Importamos el Dashboard de crafteo
 
 const queryClient = new QueryClient();
 
@@ -18,11 +20,13 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<Index />} />
+            <Route path="/" element={<Index />} />               {/* Landing Page */}
+            <Route path="/crafting" element={<Dashboard />} />   {/* Calculadora */}
+            <Route path="/flipper" element={<MarketFlipper />} />{/* Flipper */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
-        <Analytics /> {/* <-- 2. Lo agregamos al final de la app */}
+        <Analytics />
       </TooltipProvider>
     </LocaleProvider>
   </QueryClientProvider>

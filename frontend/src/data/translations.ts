@@ -85,6 +85,23 @@ export const uiLabels: TranslationMap = {
   totalProfit: { en: "Tot Profit", es: "Gan Total" },
   roi: { en: "ROI", es: "ROI" },
 
+  marketFlipper: {
+    en: "Market Flipper",
+    es: "Market Flipper"
+  },
+  buyCity: {
+    en: "Buy City",
+    es: "Ciudad de Compra"
+  },
+  profitPerItem: {
+    en: "Profit per Item",
+    es: "Ganancia por Ítem"
+  },
+  useSellOrders: {
+    en: "Use Sell Orders",
+    es: "Orden de Venta"
+  },
+
   // Tooltips
   tipItem: { en: "Name of the craftable item", es: "Nombre del objeto crafteable" },
   tipCCity: { en: "City where the item is crafted", es: "Ciudad donde se craftea el objeto" },
@@ -120,3 +137,4 @@ export function tItem(key: string, locale: Locale): string {
   if (!entry) return key;
   return entry[locale] || entry.en;
 }
+
