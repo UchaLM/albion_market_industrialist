@@ -1,9 +1,11 @@
+import { useState, useMemo } from "react";
+import { HelpCircle, ArrowUpDown, Loader2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocale } from "@/contexts/LocaleContext";
 import { t } from "@/data/translations";
-import { Loader2, ArrowRight } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 
-interface FlippingEntry {
+type FlippingEntry = {
   item_id: string;
   item_name_en: string;
   item_name_es: string;
@@ -12,85 +14,195 @@ interface FlippingEntry {
   sell_city: string;
   buy_price: number;
   sell_price: number;
-  profit: number;
+  unit_profit: number;
+  qty: number;
+  total_profit: number;
   roi: number;
   volume: number;
-  updated_at: string;
+  updated_at?: string;
+};
+
+type SortKey = keyof FlippingEntry;
+type SortDir = "asc" | "desc";
+
+const baseColumns: { key: SortKey; label: string; tip: string; align?: string }[] = [
+  { key: "item_name_en", label: "item", tip: "tipItem" },
+  { key: "buy_city", label: "buyCity", tip: "tipCCity" }, 
+  { key: "sell_city", label: "targetCity", tip: "tipSCity" },
+  { key: "buy_price", label: "buyPrice", tip: "tipCostPerUnit", align: "right" },
+  { key: "sell_price", label: "sellPerUnit", tip: "tipSellPerUnit", align: "right" },
+  { key: "unit_profit", label: "unitProfit", tip: "tipUnitProfit", align: "right" },
+  { key: "qty", label: "qty", tip: "tipQty", align: "right" },
+  { key: "volume", label: "volume", tip: "tipVolume", align: "right" },
+  { key: "total_profit", label: "totalProfit", tip: "tipTotalProfit", align: "right" },
+  { key: "roi", label: "roi", tip: "tipRoi", align: "right" },
+  { key: "updated_at", label: "updated", tip: "tipUpdated", align: "right" },
+];
+
+function formatSilver(n: number) {
+  return n >= 1000 ? `${(n / 1000).toFixed(1)}k` : n.toLocaleString();
 }
+
+const getTimeAgo = (dateString: string | undefined, locale: string) => {
+  if (!dateString || dateString.startsWith("0001") || dateString === "Old") {
+    return locale === 'es' ? "Viejo" : "Old";
+  }
+  const diff = Date.now() - new Date(dateString).getTime();
+  const hours = Math.floor(diff / (1000 * 60 * 60));
+  if (hours < 1) return locale === 'es' ? "Recién" : "Just now";
+  if (hours < 24) return locale === 'es' ? `hace ${hours}h` : `${hours}h ago`;
+  return locale === 'es' ? `hace ${Math.floor(hours / 24)}d` : `${Math.floor(hours / 24)}d ago`;
+};
 
 export function FlippingTable({ filters }: any) {
   const { locale } = useLocale();
+  const [sortKey, setSortKey] = useState<SortKey>("total_profit");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
 
-  const { data, isLoading, error } = useQuery({
-    queryKey: ["flipping-profits", filters],
+  const { data: apiData = [], isLoading } = useQuery({
+    queryKey: ["flippingProfits", filters],
     queryFn: async () => {
       const params = new URLSearchParams({
-        use_premium: filters.premium.toString(),
-        use_sell_orders: filters.useSellOrders.toString(),
-        tier: filters.tier.toString(),
+        use_premium: (filters?.premium ?? true).toString(),
+        use_sell_orders: (filters?.useSellOrders ?? true).toString(),
+        tier: (filters?.tier ?? 0).toString(),
         limit: "500",
       });
-      
-      const response = await fetch(`https://albion-market-industrialist.onrender.com/api/flipping-profits?${params}`);
-      if (!response.ok) throw new Error("Error fetching data");
-      let results: FlippingEntry[] = await response.json();
 
-      if (filters.buyCity && filters.buyCity !== "All") {
-        results = results.filter((i) => i.buy_city === filters.buyCity);
+      const response = await fetch(`https://albion-market-industrialist.onrender.com/api/flipping-profits?${params.toString()}`);
+      if (!response.ok) throw new Error("Network response was not ok");
+      let data = await response.json();
+
+      if (filters?.buyCity && filters.buyCity !== "All") {
+        data = data.filter((item: FlippingEntry) => item.buy_city === filters.buyCity);
       }
-      if (filters.city && filters.city !== "All") {
-        results = results.filter((i) => i.sell_city === filters.city);
+      if (filters?.city && filters.city !== "All") {
+        data = data.filter((item: FlippingEntry) => item.sell_city === filters.city);
       }
 
-      return results;
+      return data;
     },
     refetchInterval: 60000,
   });
 
-  if (isLoading) return <div className="flex h-64 items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-gold" /></div>;
-  if (error) return <div className="p-4 text-red-500 text-center">Error loading flipping data</div>;
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else { setSortKey(key); setSortDir("desc"); }
+  };
+
+  const sorted = useMemo(() => {
+    const data = [...apiData];
+    data.sort((a, b) => {
+      const aVal = a[sortKey];
+      const bVal = b[sortKey];
+      if (typeof aVal === "number" && typeof bVal === "number") {
+        return sortDir === "asc" ? aVal - bVal : bVal - aVal;
+      }
+      return sortDir === "asc"
+        ? String(aVal).localeCompare(String(bVal))
+        : String(bVal).localeCompare(String(aVal));
+    });
+    return data;
+  }, [apiData, sortKey, sortDir]);
+
+  const renderCell = (entry: FlippingEntry, col: (typeof baseColumns)[0]) => {
+    const val = entry[col.key];
+
+    // TRADUCCIÓN NOMBRES
+    if (col.key === "item_name_en") {
+      const name = locale === 'es' ? entry.item_name_es : entry.item_name_en;
+      return <span className="font-medium text-gold">{name}</span>;
+    }
+
+    // COLORES DE LAS CIUDADES
+    if (col.key === "buy_city") return <span className="font-semibold text-blue-400">{val}</span>;
+    if (col.key === "sell_city") return <span className="font-semibold text-gold">{val}</span>;
+
+    // COLORES DE GANANCIAS Y ROIS (idéntico al Crafteo)
+    if (col.key === "unit_profit" || col.key === "total_profit") {
+      const n = val as number;
+      return <span className={n >= 0 ? "text-profit font-semibold" : "text-loss font-semibold"}>{formatSilver(n)}</span>;
+    }
+    
+    if (col.key === "roi") return <span className={(val as number) >= 40 ? "text-profit" : "text-foreground"}>{Math.round(val as number)}%</span>;
+    if (col.key === "buy_price" || col.key === "sell_price") return formatSilver(val as number);
+
+    // TIEMPO ACTUALIZADO
+    if (col.key === "updated_at") {
+      const timeStr = getTimeAgo(val as string, locale);
+      const isOld = timeStr.includes("d") || timeStr === "Old" || timeStr === "Viejo";
+      return <span className={`font-medium whitespace-nowrap ${isOld ? "text-red-400" : "text-green-400"}`}>{timeStr}</span>;
+    }
+
+    return String(val);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex h-64 items-center justify-center rounded-lg border border-border bg-card">
+        <Loader2 className="h-8 w-8 animate-spin text-gold" />
+      </div>
+    );
+  }
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-border bg-card">
-      <table className="w-full text-left text-sm">
-        <thead className="bg-muted/50 text-xs font-medium uppercase text-muted-foreground">
+    <div className="max-h-[700px] overflow-y-auto rounded-lg border border-border bg-card relative">
+      <table className="w-full text-sm">
+        <thead className="sticky top-0 z-20 bg-muted/95 backdrop-blur border-b border-border shadow-sm">
           <tr>
-            <th className="px-4 py-3">{t("item", locale)}</th>
-            <th className="px-4 py-3">{t("buyCity", locale) || "Buy City"}</th>
-            <th className="px-4 py-3 text-center"></th>
-            <th className="px-4 py-3">{t("targetCity", locale)}</th>
-            <th className="px-4 py-3 text-right">{t("profitPerItem", locale) || "Profit"}</th>
-            <th className="px-4 py-3 text-right">ROI</th>
-            <th className="px-4 py-3 text-right">{t("volume", locale)}</th>
-            <th className="px-4 py-3 text-right">{t("updated", locale)}</th>
+            {baseColumns.map((col) => (
+              <th
+                key={col.key}
+                className={`cursor-pointer whitespace-nowrap px-3 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground ${
+                  col.align === "right" ? "text-right" : "text-left"
+                }`}
+                onClick={() => handleSort(col.key)}
+              >
+                <span className="inline-flex items-center gap-1">
+                  {t(col.label, locale) || col.label}
+                  
+                  <TooltipProvider delayDuration={100}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <HelpCircle className="h-3.5 w-3.5 text-muted-foreground/60 hover:text-gold transition-colors" />
+                      </TooltipTrigger>
+                      <TooltipContent 
+                        side="bottom" 
+                        align={col.align === "right" ? "end" : "start"}
+                        sideOffset={6}
+                        className="max-w-[260px] whitespace-normal break-words p-3 text-sm z-[9999] bg-popover text-popover-foreground shadow-lg leading-relaxed border-border"
+                      >
+                        {t(col.tip, locale) || col.tip}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+
+                  {sortKey === col.key && (
+                    <ArrowUpDown className="h-3 w-3 text-gold" />
+                  )}
+                </span>
+              </th>
+            ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-border">
-          {data?.map((item, idx) => (
-            <tr key={`${item.item_id}-${idx}`} className="hover:bg-muted/30 transition-colors">
-              <td className="px-4 py-3 font-medium">
-                {locale === "es" ? item.item_name_es : item.item_name_en}
-                <div className="text-[10px] text-muted-foreground font-mono">{item.item_id}</div>
-              </td>
-              <td className="px-4 py-3 text-blue-400 font-semibold">{item.buy_city}</td>
-              <td className="px-4 py-3 text-muted-foreground text-center">
-                <ArrowRight className="h-4 w-4 inline-block" />
-              </td>
-              <td className="px-4 py-3 text-gold font-semibold">{item.sell_city}</td>
-              <td className="px-4 py-3 text-right text-green-400 font-bold">
-                {Math.round(item.profit).toLocaleString()} <span className="text-[10px] opacity-70">/ u</span>
-              </td>
-              <td className="px-4 py-3 text-right">
-                <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${item.roi > 20 ? 'bg-green-500/20 text-green-500' : 'bg-gold/20 text-gold'}`}>
-                  {item.roi.toFixed(1)}%
-                </span>
-              </td>
-              <td className="px-4 py-3 text-right text-muted-foreground">
-                {item.volume.toFixed(1)} <span className="text-[10px] uppercase">/d</span>
-              </td>
-              <td className="px-4 py-3 text-right text-[10px] text-muted-foreground">
-                {item.updated_at}
-              </td>
+        <tbody>
+          {sorted.map((entry, i) => (
+            <tr
+              key={`${entry.item_id}-${entry.buy_city}-${entry.sell_city}`}
+              className={`border-b border-border/50 transition-colors hover:bg-accent/50 ${
+                i % 2 === 0 ? "bg-card" : "bg-muted/20"
+              }`}
+            >
+              {baseColumns.map((col) => (
+                <td
+                  key={col.key}
+                  className={`whitespace-nowrap px-3 py-2.5 ${
+                    col.align === "right" ? "text-right" : "text-left"
+                  }`}
+                >
+                  {renderCell(entry, col)}
+                </td>
+              ))}
             </tr>
           ))}
         </tbody>

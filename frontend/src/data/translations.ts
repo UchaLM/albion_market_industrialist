@@ -101,6 +101,10 @@ export const uiLabels: TranslationMap = {
     en: "Use Sell Orders",
     es: "Orden de Venta"
   },
+  buyPrice: {
+    en: "Buy Price",
+    es: "Precio de Compra"
+  },
 
   // Tooltips
   tipItem: { en: "Name of the craftable item", es: "Nombre del objeto crafteable" },

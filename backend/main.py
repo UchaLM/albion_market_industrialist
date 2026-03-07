@@ -62,7 +62,6 @@ def get_crafting_profits(
     rest_min_profit: int = Query(5000),
     limit: int = Query(500)
 ):
-
     query = db.query(CraftingOpportunity).filter(CraftingOpportunity.item_sell_price > 0)
     if tier > 0: query = query.filter(CraftingOpportunity.tier == tier)
     else: query = query.filter(CraftingOpportunity.tier <= 8)
@@ -119,40 +118,53 @@ def get_crafting_profits(
     results.sort(key=lambda x: x.total_profit, reverse=True)
     return results[:limit]
 
-# --- NUEVA RUTA DEL MARKET FLIPPER ---
 @app.get("/api/flipping-profits")
 def get_flipping_profits(
-    use_premium: bool = True,
-    use_sell_orders: bool = True,
-    tier: int = 0,
-    limit: int = 500,
+    use_premium: bool = Query(True),
+    use_sell_orders: bool = Query(True),
+    tier: int = Query(0),
+    max_investment: int = Query(25000000),     # Mismos filtros de Crafting
+    max_market_share: float = Query(0.25),
+    min_total_profit: int = Query(50000),
+    max_roi_limit: float = Query(250.0),
+    limit: int = Query(500),
     db: Session = Depends(get_db)
 ):
     query = db.query(FlippingOpportunity)
     if tier > 0: query = query.filter(FlippingOpportunity.tier == tier)
-        
-    if use_sell_orders:
-        tax = 0.065 if use_premium else 0.105
-        target_price_col = FlippingOpportunity.sell_price_min
-    else:
-        tax = 0.04 if use_premium else 0.08
-        target_price_col = FlippingOpportunity.buy_price_max
-        
-    profit_expr = (target_price_col * (1 - tax)) - FlippingOpportunity.buy_price
-    query = query.filter(target_price_col > 0)
-    query = query.filter(profit_expr > 0)
-    query = query.order_by(profit_expr.desc())
-        
-    results = query.limit(limit).all()
+    opportunities = query.all()
     
-    response = []
-    for r in results:
+    results = []
+    for r in opportunities:
+        tax = 0.065 if use_premium else 0.105
         target_price = r.sell_price_min if use_sell_orders else r.buy_price_max
-        profit = (target_price * (1 - tax)) - r.buy_price
-        roi = (profit / r.buy_price) * 100 if r.buy_price > 0 else 0
-        response.append({
+        
+        if not use_sell_orders:
+            tax = 0.04 if use_premium else 0.08
+            
+        if target_price <= 0 or r.buy_price <= 0: continue
+        
+        unit_profit = (target_price * (1 - tax)) - r.buy_price
+        if unit_profit <= 0: continue
+        
+        roi = (unit_profit / r.buy_price) * 100
+        # ¡Adiós ROIs de 50.000.000%!
+        if roi > max_roi_limit: continue
+        
+        # Mismo cálculo de cantidad y ganancia total que el Crafteo
+        max_sellable_vol = r.volume * max_market_share
+        qty = min(max_sellable_vol, max_investment / r.buy_price) if r.buy_price > 0 else max_sellable_vol
+        qty = max(1, qty)
+        
+        total_profit = unit_profit * qty
+        if total_profit < min_total_profit: continue
+        
+        results.append({
             "item_id": r.item_id, "item_name_en": r.item_name_en, "item_name_es": r.item_name_es,
             "tier": r.tier, "buy_city": r.buy_city, "sell_city": r.sell_city, "buy_price": r.buy_price,
-            "sell_price": target_price, "profit": profit, "roi": roi, "volume": r.volume, "updated_at": r.updated_at
+            "sell_price": target_price, "unit_profit": unit_profit, "qty": qty, "total_profit": total_profit,
+            "roi": roi, "volume": r.volume, "updated_at": r.updated_at
         })
-    return response
+        
+    results.sort(key=lambda x: x["total_profit"], reverse=True)
+    return results[:limit]
