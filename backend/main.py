@@ -4,8 +4,7 @@ from sqlalchemy.orm import Session
 from typing import List
 
 from database import get_db, engine
-from models import CraftingOpportunity, Base
-from models import FlippingOpportunity
+from models import CraftingOpportunity, FlippingOpportunity, Base
 import schemas
 from crafting_math import get_bonus_city
 
@@ -40,14 +39,6 @@ def startup_event():
     thread = threading.Thread(target=run_background_worker, daemon=True)
     thread.start()
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"], 
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
 def calculate_rrr(item_id: str, craft_city: str, use_focus: bool) -> float:
     bonus_city = get_bonus_city(item_id)
     is_bonus = craft_city == bonus_city
@@ -73,12 +64,8 @@ def get_crafting_profits(
 ):
 
     query = db.query(CraftingOpportunity).filter(CraftingOpportunity.item_sell_price > 0)
-    
-    if tier > 0:
-        query = query.filter(CraftingOpportunity.tier == tier)
-    else:
-        query = query.filter(CraftingOpportunity.tier <= 8)
-        
+    if tier > 0: query = query.filter(CraftingOpportunity.tier == tier)
+    else: query = query.filter(CraftingOpportunity.tier <= 8)
     opportunities = query.all()
 
     tax_rate = 0.04 if use_premium else 0.08
@@ -88,14 +75,11 @@ def get_crafting_profits(
     for opp in opportunities:
         ret_cost = opp.returnable_cost_buy if use_buy_orders else opp.returnable_cost_sell
         non_ret_cost = opp.non_returnable_cost_buy if use_buy_orders else opp.non_returnable_cost_sell
-        
         if (ret_cost + non_ret_cost) <= 0: continue
 
         current_rrr = calculate_rrr(opp.item_id, opp.craft_city, use_focus)
         station_fee = opp.item_value * (station_fee_per_100 / 100) * 0.1125
-        
         actual_material_cost = (ret_cost * (1 - current_rrr)) + non_ret_cost
-        
         net_revenue = opp.item_sell_price * (1 - (tax_rate + setup_fee))
         active_journal_profit = opp.journal_profit if use_journals else 0
         
@@ -103,11 +87,9 @@ def get_crafting_profits(
         roi = (unit_profit / actual_material_cost) * 100 if actual_material_cost > 0 else 0
 
         if roi > max_roi_limit: continue
-
         max_sellable_vol = opp.volume * max_market_share
         qty = min(max_sellable_vol, max_investment / actual_material_cost) if actual_material_cost > 0 else max_sellable_vol
         qty = max(1, qty)
-
         total_profit = unit_profit * qty
 
         if opp.sell_city in ["Arthurs Rest", "Merlyns Rest", "Morganas Rest"]:
@@ -137,6 +119,7 @@ def get_crafting_profits(
     results.sort(key=lambda x: x.total_profit, reverse=True)
     return results[:limit]
 
+# --- NUEVA RUTA DEL MARKET FLIPPER ---
 @app.get("/api/flipping-profits")
 def get_flipping_profits(
     use_premium: bool = True,
@@ -146,9 +129,7 @@ def get_flipping_profits(
     db: Session = Depends(get_db)
 ):
     query = db.query(FlippingOpportunity)
-    
-    if tier > 0:
-        query = query.filter(FlippingOpportunity.tier == tier)
+    if tier > 0: query = query.filter(FlippingOpportunity.tier == tier)
         
     if use_sell_orders:
         tax = 0.065 if use_premium else 0.105
@@ -158,7 +139,6 @@ def get_flipping_profits(
         target_price_col = FlippingOpportunity.buy_price_max
         
     profit_expr = (target_price_col * (1 - tax)) - FlippingOpportunity.buy_price
-    
     query = query.filter(target_price_col > 0)
     query = query.filter(profit_expr > 0)
     query = query.order_by(profit_expr.desc())
@@ -170,20 +150,9 @@ def get_flipping_profits(
         target_price = r.sell_price_min if use_sell_orders else r.buy_price_max
         profit = (target_price * (1 - tax)) - r.buy_price
         roi = (profit / r.buy_price) * 100 if r.buy_price > 0 else 0
-        
         response.append({
-            "item_id": r.item_id,
-            "item_name_en": r.item_name_en,
-            "item_name_es": r.item_name_es,
-            "tier": r.tier,
-            "buy_city": r.buy_city,
-            "sell_city": r.sell_city,
-            "buy_price": r.buy_price,
-            "sell_price": target_price,
-            "profit": profit,
-            "roi": roi,
-            "volume": r.volume,
-            "updated_at": r.updated_at
+            "item_id": r.item_id, "item_name_en": r.item_name_en, "item_name_es": r.item_name_es,
+            "tier": r.tier, "buy_city": r.buy_city, "sell_city": r.sell_city, "buy_price": r.buy_price,
+            "sell_price": target_price, "profit": profit, "roi": roi, "volume": r.volume, "updated_at": r.updated_at
         })
-        
     return response

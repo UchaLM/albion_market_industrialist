@@ -54,7 +54,6 @@ def process_and_store_items():
     for target_id in filtered_targets:
         base_id = target_id.split("@")[0]
         ench_lvl = int(target_id.split("@")[1]) if "@" in target_id else 0
-        
         if base_id not in recipes_db: continue
         try: tier = int(target_id.split('_')[0].replace('T', ''))
         except: continue
@@ -94,7 +93,6 @@ def process_and_store_items():
                 
                 p_sell = get_price(prices, real_ing_id, craft_city, False)
                 p_buy = get_price(prices, real_ing_id, craft_city, True)
-
                 is_ret = is_refinable_resource(u_name)
                 
                 if p_sell <= 0: poss_dir_sell = False
@@ -106,7 +104,6 @@ def process_and_store_items():
                 else:
                     if is_ret: dir_ret_buy += p_buy * count
                     else: dir_non_buy += p_buy * count
-                    
                 if is_ret: total_resources_unit += (count / yield_dir)
 
             cost_dir_ret_sell = dir_ret_sell / yield_dir if poss_dir_sell else float('inf')
@@ -133,7 +130,6 @@ def process_and_store_items():
                     else:
                         if is_ret: base_ret_sell += p_sell * count
                         else: base_non_sell += p_sell * count
-                        
                     if p_buy <= 0: poss_upg_buy = False
                     else:
                         if is_ret: base_ret_buy += p_buy * count
@@ -144,9 +140,7 @@ def process_and_store_items():
                 for e_level in range(1, ench_lvl + 1):
                     ench_mats = {1: "_RUNE", 2: "_SOUL", 3: "_RELIC"}
                     if e_level not in ench_mats:
-                        poss_upg_sell = False
-                        poss_upg_buy = False
-                        break
+                        poss_upg_sell = False; poss_upg_buy = False; break
                         
                     ench_mat_id = f"T{tier}{ench_mats[e_level]}"
                     p_sell = get_price(prices, ench_mat_id, craft_city, False)
@@ -154,7 +148,6 @@ def process_and_store_items():
                     
                     if p_sell <= 0: poss_upg_sell = False
                     else: ench_sell_cost += p_sell * ench_amount
-                    
                     if p_buy <= 0: poss_upg_buy = False
                     else: ench_buy_cost += p_buy * ench_amount
                 
@@ -167,28 +160,15 @@ def process_and_store_items():
 
             total_dir_sell = cost_dir_ret_sell + cost_dir_non_sell
             total_upg_sell = cost_upg_ret_sell + cost_upg_non_sell
-            
-            if total_dir_sell < total_upg_sell:
-                best_ret_sell = cost_dir_ret_sell
-                best_non_sell = cost_dir_non_sell
-                best_method = "Direct"
-            else:
-                best_ret_sell = cost_upg_ret_sell
-                best_non_sell = cost_upg_non_sell
-                best_method = "Upgrade"
+            if total_dir_sell < total_upg_sell: best_ret_sell = cost_dir_ret_sell; best_non_sell = cost_dir_non_sell; best_method = "Direct"
+            else: best_ret_sell = cost_upg_ret_sell; best_non_sell = cost_upg_non_sell; best_method = "Upgrade"
                 
             total_dir_buy = cost_dir_ret_buy + cost_dir_non_buy
             total_upg_buy = cost_upg_ret_buy + cost_upg_non_buy
-            
-            if total_dir_buy < total_upg_buy:
-                best_ret_buy = cost_dir_ret_buy
-                best_non_buy = cost_dir_non_buy
-            else:
-                best_ret_buy = cost_upg_ret_buy
-                best_non_buy = cost_upg_non_buy
+            if total_dir_buy < total_upg_buy: best_ret_buy = cost_dir_ret_buy; best_non_buy = cost_dir_non_buy
+            else: best_ret_buy = cost_upg_ret_buy; best_non_buy = cost_upg_non_buy
 
-            if (best_ret_sell == float('inf') and best_non_sell == float('inf')) and (best_ret_buy == float('inf') and best_non_buy == float('inf')): 
-                continue
+            if (best_ret_sell == float('inf') and best_non_sell == float('inf')) and (best_ret_buy == float('inf') and best_non_buy == float('inf')): continue
 
             raw_j_profit = 0.0
             if tier in RESOURCE_FAME and total_resources_unit > 0 and journal_full_name:
@@ -198,8 +178,7 @@ def process_and_store_items():
                 j_id_f = f"T{tier}_JOURNAL_{journal_full_name}_FULL"
                 p_e = get_price(prices, j_id_e, craft_city, False)
                 p_f = prices.get(j_id_f, {}).get("sell_offers", {}).get(craft_city, 0)
-                if p_e > 0 and p_f > p_e:
-                    raw_j_profit = (p_f - p_e) * journals_filled
+                if p_e > 0 and p_f > p_e: raw_j_profit = (p_f - p_e) * journals_filled
 
             for sell_city in SELL_CITIES:
                 sell_price = prices.get(target_id, {}).get("sell_offers", {}).get(sell_city, 0)
@@ -209,27 +188,18 @@ def process_and_store_items():
                 if sell_price <= 0 or mkt_vol < 0.01: continue
 
                 opportunities_to_upsert.append({
-                    "item_id": target_id,
-                    "item_name_en": item_name_en,
-                    "item_name_es": item_name_es,
-                    "tier": tier,
-                    "craft_city": craft_city,
-                    "sell_city": sell_city,
-                    "method": best_method,
+                    "item_id": target_id, "item_name_en": item_name_en, "item_name_es": item_name_es, "tier": tier,
+                    "craft_city": craft_city, "sell_city": sell_city, "method": best_method,
                     "journal": f"{journal_full_name.capitalize()}'s Journal" if journal_full_name else "---",
-                    "item_sell_price": sell_price,
-                    "returnable_cost_sell": best_ret_sell if best_ret_sell != float('inf') else 0,
+                    "item_sell_price": sell_price, "returnable_cost_sell": best_ret_sell if best_ret_sell != float('inf') else 0,
                     "non_returnable_cost_sell": best_non_sell if best_non_sell != float('inf') else 0,
                     "returnable_cost_buy": best_ret_buy if best_ret_buy != float('inf') else 0,
                     "non_returnable_cost_buy": best_non_buy if best_non_buy != float('inf') else 0,
-                    "journal_profit": raw_j_profit,
-                    "item_value": item_val,
-                    "volume": mkt_vol,
-                    "updated_at": updated_date
+                    "journal_profit": raw_j_profit, "item_value": item_val, "volume": mkt_vol, "updated_at": updated_date
                 })
 
     # ==========================================
-    # CÁLCULO MARKET FLIPPER
+    # NUEVO: CÁLCULO MARKET FLIPPER
     # ==========================================
     flipping_opportunities = []
     ALL_CITIES = list(set(CRAFT_CITIES + SELL_CITIES))
@@ -251,10 +221,7 @@ def process_and_store_items():
             for sell_city in ALL_CITIES:
                 if buy_city == sell_city: continue
                 
-                # Compramos siempre del Sell Order más barato en la ciudad origen
                 buy_price = float(prices.get(item_id, {}).get("sell_offers", {}).get(buy_city, 0))
-                
-                # Obtenemos AMBOS precios de la ciudad destino
                 sell_price_min = float(prices.get(item_id, {}).get("sell_offers", {}).get(sell_city, 0))
                 buy_price_max = float(prices.get(item_id, {}).get("buy_offers", {}).get(sell_city, 0))
                 
@@ -265,42 +232,26 @@ def process_and_store_items():
                 if sell_price_min <= 0 and buy_price_max <= 0: continue
                 
                 flipping_opportunities.append({
-                    "item_id": item_id,
-                    "buy_city": buy_city,
-                    "sell_city": sell_city,
-                    "item_name_en": item_name_en,
-                    "item_name_es": item_name_es,
-                    "tier": tier,
-                    "buy_price": buy_price,
-                    "sell_price_min": sell_price_min,
-                    "buy_price_max": buy_price_max,
-                    "volume": mkt_vol,
-                    "updated_at": updated_date
+                    "item_id": item_id, "buy_city": buy_city, "sell_city": sell_city,
+                    "item_name_en": item_name_en, "item_name_es": item_name_es, "tier": tier,
+                    "buy_price": buy_price, "sell_price_min": sell_price_min, "buy_price_max": buy_price_max,
+                    "volume": mkt_vol, "updated_at": updated_date
                 })
 
     CHUNK_SIZE = 500
-    
     if opportunities_to_upsert:
         logging.info(f"Preparing to upsert {len(opportunities_to_upsert)} Crafting routes...")
         for i in range(0, len(opportunities_to_upsert), CHUNK_SIZE):
             chunk = opportunities_to_upsert[i : i + CHUNK_SIZE]
             stmt = insert(CraftingOpportunity).values(chunk)
             update_dict = {
-                "method": stmt.excluded.method,
-                "item_sell_price": stmt.excluded.item_sell_price,
-                "returnable_cost_sell": stmt.excluded.returnable_cost_sell,
-                "non_returnable_cost_sell": stmt.excluded.non_returnable_cost_sell,
-                "returnable_cost_buy": stmt.excluded.returnable_cost_buy,
-                "non_returnable_cost_buy": stmt.excluded.non_returnable_cost_buy,
-                "journal_profit": stmt.excluded.journal_profit,
-                "item_value": stmt.excluded.item_value,
-                "volume": stmt.excluded.volume,
-                "updated_at": stmt.excluded.updated_at
+                "method": stmt.excluded.method, "item_sell_price": stmt.excluded.item_sell_price,
+                "returnable_cost_sell": stmt.excluded.returnable_cost_sell, "non_returnable_cost_sell": stmt.excluded.non_returnable_cost_sell,
+                "returnable_cost_buy": stmt.excluded.returnable_cost_buy, "non_returnable_cost_buy": stmt.excluded.non_returnable_cost_buy,
+                "journal_profit": stmt.excluded.journal_profit, "item_value": stmt.excluded.item_value,
+                "volume": stmt.excluded.volume, "updated_at": stmt.excluded.updated_at
             }
-            stmt = stmt.on_conflict_do_update(
-                index_elements=['item_id', 'craft_city', 'sell_city'], 
-                set_=update_dict
-            )
+            stmt = stmt.on_conflict_do_update(index_elements=['item_id', 'craft_city', 'sell_city'], set_=update_dict)
             db.execute(stmt)
             
     if flipping_opportunities:
@@ -309,16 +260,10 @@ def process_and_store_items():
             chunk = flipping_opportunities[i : i + CHUNK_SIZE]
             stmt = insert(FlippingOpportunity).values(chunk)
             update_dict = {
-                "buy_price": stmt.excluded.buy_price,
-                "sell_price_min": stmt.excluded.sell_price_min,
-                "buy_price_max": stmt.excluded.buy_price_max,
-                "volume": stmt.excluded.volume,
-                "updated_at": stmt.excluded.updated_at
+                "buy_price": stmt.excluded.buy_price, "sell_price_min": stmt.excluded.sell_price_min,
+                "buy_price_max": stmt.excluded.buy_price_max, "volume": stmt.excluded.volume, "updated_at": stmt.excluded.updated_at
             }
-            stmt = stmt.on_conflict_do_update(
-                index_elements=['item_id', 'buy_city', 'sell_city'], 
-                set_=update_dict
-            )
+            stmt = stmt.on_conflict_do_update(index_elements=['item_id', 'buy_city', 'sell_city'], set_=update_dict)
             db.execute(stmt)
 
     db.commit()
