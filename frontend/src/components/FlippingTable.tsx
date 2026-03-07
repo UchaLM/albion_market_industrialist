@@ -27,7 +27,7 @@ type SortDir = "asc" | "desc";
 
 const baseColumns: { key: SortKey; label: string; tip: string; align?: string }[] = [
   { key: "item_name_en", label: "item", tip: "tipItem" },
-  { key: "buy_city", label: "buyCity", tip: "tipCCity" }, 
+  { key: "buy_city", label: "buyCity", tip: "tipCCity" },
   { key: "sell_city", label: "targetCity", tip: "tipSCity" },
   { key: "buy_price", label: "buyPrice", tip: "tipCostPerUnit", align: "right" },
   { key: "sell_price", label: "sellPerUnit", tip: "tipSellPerUnit", align: "right" },
@@ -108,26 +108,45 @@ export function FlippingTable({ filters }: any) {
   const renderCell = (entry: FlippingEntry, col: (typeof baseColumns)[0]) => {
     const val = entry[col.key];
 
-    // TRADUCCIÓN NOMBRES
+    // NOMBRES EN DORADO IDÉNTICO AL CRAFTEO
     if (col.key === "item_name_en") {
       const name = locale === 'es' ? entry.item_name_es : entry.item_name_en;
       return <span className="font-medium text-gold">{name}</span>;
     }
 
-    // COLORES DE LAS CIUDADES
-    if (col.key === "buy_city") return <span className="font-semibold text-blue-400">{val}</span>;
-    if (col.key === "sell_city") return <span className="font-semibold text-gold">{val}</span>;
+    // CIUDADES CON EL MISMO ESTILO
+    if (col.key === "buy_city" || col.key === "sell_city") {
+      return String(val);
+    }
 
-    // COLORES DE GANANCIAS Y ROIS (idéntico al Crafteo)
+    // PRECIOS BASE (COMPRA Y VENTA) CON EL MISMO REDONDEO "k"
+    if (col.key === "buy_price" || col.key === "sell_price") {
+      return formatSilver(Number(val));
+    }
+
+    // COLORES VERDES/ROJOS PARA LAS GANANCIAS
     if (col.key === "unit_profit" || col.key === "total_profit") {
-      const n = val as number;
+      const n = Number(val);
       return <span className={n >= 0 ? "text-profit font-semibold" : "text-loss font-semibold"}>{formatSilver(n)}</span>;
     }
-    
-    if (col.key === "roi") return <span className={(val as number) >= 40 ? "text-profit" : "text-foreground"}>{Math.round(val as number)}%</span>;
-    if (col.key === "buy_price" || col.key === "sell_price") return formatSilver(val as number);
 
-    // TIEMPO ACTUALIZADO
+    // ADIÓS ROI DECIMAL INFINITO: LO LIMITAMOS A 2 DECIMALES
+    if (col.key === "roi") {
+      const n = Number(val);
+      return <span className={n >= 40 ? "text-profit" : "text-foreground"}>{n.toFixed(2)}%</span>;
+    }
+
+    // ADIÓS VOLUMEN DECIMAL INFINITO: LO LIMITAMOS A 1 DECIMAL
+    if (col.key === "volume") {
+      return Number(val).toFixed(1);
+    }
+
+    // CANTIDADES CON COMAS MILES (EJ: 1,500)
+    if (col.key === "qty") {
+      return Number(val).toLocaleString();
+    }
+
+    // TIEMPO RELATIVO CON COLORES
     if (col.key === "updated_at") {
       const timeStr = getTimeAgo(val as string, locale);
       const isOld = timeStr.includes("d") || timeStr === "Old" || timeStr === "Viejo";
